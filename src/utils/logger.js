@@ -31,4 +31,25 @@ async function logError(context, error) {
   }
 }
 
-module.exports = { initLogger, logError };
+// Trace d'audit pour les actions de modération (qui a fait quoi, à qui,
+// pourquoi) : contrairement à logError, ce n'est pas une erreur, juste une
+// preuve que l'action a bien eu lieu.
+async function logAction(message) {
+  console.log(`[action] ${message}`);
+
+  if (!client || !config.logChannelId) {
+    return;
+  }
+
+  try {
+    const channel = await client.channels.fetch(config.logChannelId);
+
+    if (channel?.isTextBased()) {
+      await channel.send(message.slice(0, 1900));
+    }
+  } catch (loggingError) {
+    console.error('[logger] Impossible d\'envoyer dans le salon de logs :', loggingError.message);
+  }
+}
+
+module.exports = { initLogger, logError, logAction };
