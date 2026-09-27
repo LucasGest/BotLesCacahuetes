@@ -17,8 +17,21 @@ const PHRASES = [
   'Cacabot a décidé, point final. 🤖',
 ];
 
+const COIN_FLIP_CHANCE = 0.1; // 1 chance sur 10
+
 function tirer(liste) {
   return liste[Math.floor(Math.random() * liste.length)];
+}
+
+// Petit easter egg : 1 fois sur 10, un pile ou face apparaît sous la carte.
+// Purement cosmétique, ne change rien au tirage de l'agent.
+function ajouterPileOuFace(embed) {
+  if (Math.random() >= COIN_FLIP_CHANCE) {
+    return embed;
+  }
+
+  const resultat = Math.random() < 0.5 ? 'Pile' : 'Face';
+  return embed.addFields({ name: '🪙 Pile ou face', value: `**${resultat}** !` });
 }
 
 function creerEmbed(agent, user, infoPool) {
@@ -39,7 +52,7 @@ function creerEmbed(agent, user, infoPool) {
   if (agent.icon) embed.setThumbnail(agent.icon);
   if (agent.portrait) embed.setImage(agent.portrait);
 
-  return embed;
+  return ajouterPileOuFace(embed);
 }
 
 module.exports = {
