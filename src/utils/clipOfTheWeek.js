@@ -3,7 +3,7 @@ const config = require('../config');
 const { getDb } = require('./firebase');
 const { logError } = require('./logger');
 
-const CLIPS_CHANNEL_NAME = 'clips';
+const CLIPS_CHANNEL_ID = '1553346987049353276';
 const WINNER_ROLE_ID = '1553371311747895346';
 const WINNER_ROLE_LABEL = 'Clip de la semaine'; // juste pour les messages/logs
 const ROLE_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -11,14 +11,6 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const TICK_INTERVAL_MS = 60 * 60 * 1000; // toutes les heures
 const STATE_COLLECTION = 'clipOfTheWeek';
 const STATE_DOC = 'state';
-
-function normalize(value) {
-  return value.normalize('NFC').trim().toLowerCase();
-}
-
-function findChannelByName(guild, name) {
-  return guild.channels.cache.find((c) => normalize(c.name) === normalize(name));
-}
 
 // Clé "année-semaine" volontairement approximative (pas ISO 8601 strict) :
 // suffisant pour ne pas relancer le concours deux fois la même semaine.
@@ -62,10 +54,11 @@ async function runWeeklyContest(guild) {
     return;
   }
 
-  const channel = findChannelByName(guild, CLIPS_CHANNEL_NAME);
+  const channel =
+    guild.channels.cache.get(CLIPS_CHANNEL_ID) ?? (await guild.channels.fetch(CLIPS_CHANNEL_ID).catch(() => null));
 
   if (!channel?.isTextBased()) {
-    await logError('Clip de la semaine', new Error(`Salon #${CLIPS_CHANNEL_NAME} introuvable`));
+    await logError('Clip de la semaine', new Error(`Salon ${CLIPS_CHANNEL_ID} introuvable`));
     return;
   }
 
