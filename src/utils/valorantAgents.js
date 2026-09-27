@@ -1,6 +1,9 @@
 const API_URL = 'https://valorant-api.com/v1/agents?language=fr-FR&isPlayableCharacter=true';
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // toutes les heures
 
+// Agents débloqués gratuitement pour tout le monde
+const AGENTS_GRATUITS = ['Brimstone', 'Jett', 'Phoenix', 'Sage', 'Sova'];
+
 // Liste de secours si l'API Valorant est injoignable au tout premier appel.
 const AGENTS_SECOURS = [
   { name: 'Astra', role: 'Contrôleur' }, { name: 'Breach', role: 'Initiateur' },
@@ -16,7 +19,7 @@ const AGENTS_SECOURS = [
   { name: 'Skye', role: 'Initiateur' }, { name: 'Sova', role: 'Initiateur' },
   { name: 'Tejo', role: 'Initiateur' }, { name: 'Viper', role: 'Contrôleur' },
   { name: 'Vyse', role: 'Sentinelle' }, { name: 'Yoru', role: 'Duelliste' },
-].map((agent) => ({ ...agent, couleur: 0xff4655, capacites: [] }));
+].map((agent) => ({ ...agent, couleur: 0xff4655, capacites: [], gratuit: AGENTS_GRATUITS.includes(agent.name) }));
 
 // names vide au départ : le tout premier refresh réussi devient la référence,
 // sans déclencher de faux "nouvel agent détecté" au démarrage.
@@ -41,8 +44,9 @@ async function fetchFromApi() {
       : 0xff4655,
     capacites: (a.abilities ?? [])
       .filter((c) => c.slot !== 'Passive' && c.displayName)
-      .map((c) => c.displayName)
-  }));
+      .map((c) => c.displayName),
+    gratuit: a.isBaseContent === true || AGENTS_GRATUITS.includes(a.displayName)
+  })).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
 
 // Rafraîchit le cache et détecte les nouveaux agents par comparaison avec la

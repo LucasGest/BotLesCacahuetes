@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getAgents } = require('../../utils/valorantAgents');
+const { getOwnedAgents } = require('../../utils/ownedAgents');
 
 const EMOJI_ROLE = {
   Duelliste: '⚔️',
@@ -20,7 +21,7 @@ function tirer(liste) {
   return liste[Math.floor(Math.random() * liste.length)];
 }
 
-function creerEmbed(agent, user) {
+function creerEmbed(agent, user, infoPool) {
   const emoji = EMOJI_ROLE[agent.role] ?? '🎯';
   const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
 
@@ -29,7 +30,7 @@ function creerEmbed(agent, user) {
     .setAuthor({ name: `${emoji} ${agent.role}`, iconURL: agent.roleIcon ?? undefined })
     .setTitle(`🎲 ${agent.name}`)
     .setDescription(`${user} va jouer **${agent.name}** !\n*${phrase}*`)
-    .setFooter({ text: 'Cacabot • Les Cacahuètes 🥜' })
+    .setFooter({ text: `Cacabot • ${infoPool}` })
     .setTimestamp();
 
   if (agent.capacites?.length) {
@@ -44,7 +45,7 @@ function creerEmbed(agent, user) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('agent-random')
-    .setDescription('Tire un agent Valorant au hasard.')
+    .setDescription('Tire un agent Valorant au hasard parmi ceux que tu as débloqués.')
     .addStringOption((opt) =>
       opt
         .setName('role')
@@ -55,20 +56,43 @@ module.exports = {
           { name: '🌫️ Contrôleur', value: 'Contrôleur' },
           { name: '🛡️ Sentinelle', value: 'Sentinelle' },
         ),
+    )
+    .addUserOption((opt) =>
+      opt.setName('joueur').setDescription('Tirer pour un autre joueur (selon SES agents)'),
     ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const roleChoisi = interaction.options.getString('role');
+    const joueur = interaction.options.getUser('joueur') ?? interaction.user;
     const tous = getAgents();
-    const liste = roleChoisi ? tous.filter((a) => a.role === roleChoisi) : tous;
+
+    // Agents possédés par le joueur (null = pas configuré ou Firestore indisponible)
+    let possedes = null;
+    try {
+      possedes = await getOwnedAgents(joueur.id);
+    } catch (error) {
+      console.error('[agent-random] Lecture Firestore impossible :', error.message);
+    }
+
+    let liste = possedes ? tous.filter((a) => a.gratuit || possedes.includes(a.name)) : tous;
+    const infoPool = possedes
+      ? `Tirage parmi les ${liste.length} agents de ${joueur.username} 🥜`
+      : `${joueur.username} n'a pas configuré ses agents : tirage parmi tous 🥜`;
+
+    if (roleChoisi) liste = liste.filter((a) => a.role === roleChoisi);
 
     if (!liste.length) {
-      return interaction.editReply('😕 Aucun agent trouvé pour ce rôle.');
+      return interaction.editReply(
+        `😕 ${joueur} n'a aucun agent **${roleChoisi}** débloqué. Mets à jour avec \`/mes-agents configurer\`.`,
+      );
     }
 
     const agent = tirer(liste);
-    await interaction.editReply({ embeds: [creerEmbed(agent, interaction.user)] });
+    await interaction.editReply({
+      content: possedes ? null : '💡 Fais `/mes-agents configurer` pour ne tirer que les agents que tu as !',
+      embeds: [creerEmbed(agent, joueur, infoPool)],
+    });
   },
 };
