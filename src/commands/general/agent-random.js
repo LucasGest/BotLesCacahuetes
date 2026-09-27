@@ -1,4 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags
+} = require('discord.js');
 const { getAgents } = require('../../utils/valorantAgents');
 const { getOwnedAgents } = require('../../utils/ownedAgents');
 
@@ -19,19 +26,13 @@ const PHRASES = [
 
 const COIN_FLIP_CHANCE = 0.1; // 1 chance sur 10
 
+// État en mémoire par tirage : pas besoin de survivre à un redémarrage, une
+// session de pile ou face ne dure que quelques secondes.
+const sessions = new Map();
+let nextSessionId = 1;
+
 function tirer(liste) {
   return liste[Math.floor(Math.random() * liste.length)];
-}
-
-// Petit easter egg : 1 fois sur 10, un pile ou face apparaît sous la carte.
-// Purement cosmétique, ne change rien au tirage de l'agent.
-function ajouterPileOuFace(embed) {
-  if (Math.random() >= COIN_FLIP_CHANCE) {
-    return embed;
-  }
-
-  const resultat = Math.random() < 0.5 ? 'Pile' : 'Face';
-  return embed.addFields({ name: '🪙 Pile ou face', value: `**${resultat}** !` });
 }
 
 function creerEmbed(agent, user, infoPool) {
@@ -52,7 +53,20 @@ function creerEmbed(agent, user, infoPool) {
   if (agent.icon) embed.setThumbnail(agent.icon);
   if (agent.portrait) embed.setImage(agent.portrait);
 
-  return ajouterPileOuFace(embed);
+  return embed;
+}
+
+function creerBoutonsPileOuFace(sessionId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`agent-random:coin:${sessionId}:pile`).setLabel('Pile').setEmoji('🪙').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`agent-random:coin:${sessionId}:face`).setLabel('Face').setEmoji('🪙').setStyle(ButtonStyle.Primary)
+  );
+}
+
+function creerBoutonRelancer(sessionId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`agent-random:reroll:${sessionId}`).setLabel('Relancer').setEmoji('🔄').setStyle(ButtonStyle.Success)
+  );
 }
 
 module.exports = {
@@ -103,9 +117,75 @@ module.exports = {
     }
 
     const agent = tirer(liste);
-    await interaction.editReply({
-      content: possedes ? null : '💡 Fais `/mes-agents configurer` pour ne tirer que les agents que tu as !',
-      embeds: [creerEmbed(agent, joueur, infoPool)],
-    });
+    const embed = creerEmbed(agent, joueur, infoPool);
+    const content = possedes ? null : '💡 Fais `/mes-agents configurer` pour ne tirer que les agents que tu as !';
+
+    // 1 fois sur 10 : mini pile ou face pour gagner le droit de relancer une fois.
+    if (Math.random() < COIN_FLIP_CHANCE) {
+      const sessionId = String(nextSessionId++);
+      sessions.set(sessionId, { userId: interaction.user.id, liste, joueur, infoPool, used: false });
+      setTimeout(() => sessions.delete(sessionId), 5 * 60 * 1000);
+
+      embed.addFields({ name: '🪙 Pile ou face !', value: 'Devine le résultat pour gagner le droit de relancer.' });
+
+      await interaction.editReply({
+        content,
+        embeds: [embed],
+        components: [creerBoutonsPileOuFace(sessionId)]
+      });
+      return;
+    }
+
+    await interaction.editReply({ content, embeds: [embed] });
   },
+
+  async handleButton(interaction, action) {
+    const parts = interaction.customId.split(':');
+    const sessionId = parts[2];
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+      await interaction.reply({ content: 'Cette partie a expiré.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (interaction.user.id !== session.userId) {
+      await interaction.reply({ content: "Ce n'est pas ton tirage !", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (action === 'coin') {
+      const choix = parts[3];
+      const resultat = Math.random() < 0.5 ? 'pile' : 'face';
+      const resultatLabel = resultat === 'pile' ? 'Pile' : 'Face';
+
+      if (choix === resultat) {
+        await interaction.update({
+          content: `🪙 C'était **${resultatLabel}** ! Bien deviné, tu peux relancer une fois.`,
+          components: [creerBoutonRelancer(sessionId)]
+        });
+      } else {
+        sessions.delete(sessionId);
+        await interaction.update({
+          content: `🪙 C'était **${resultatLabel}**... Raté, pas de relance cette fois.`,
+          components: []
+        });
+      }
+      return;
+    }
+
+    if (action === 'reroll') {
+      if (session.used) {
+        await interaction.reply({ content: 'Tu as déjà relancé.', flags: MessageFlags.Ephemeral });
+        return;
+      }
+
+      session.used = true;
+      const nouvelAgent = tirer(session.liste);
+      const embed = creerEmbed(nouvelAgent, session.joueur, session.infoPool);
+
+      await interaction.update({ content: '🔄 Nouvel agent tiré !', embeds: [embed], components: [] });
+      sessions.delete(sessionId);
+    }
+  }
 };
