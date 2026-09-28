@@ -10,12 +10,7 @@ const {
   MessageFlags
 } = require('discord.js');
 
-const CHERCHE_MATE_CHANNEL_NAME = 'cherche-mate';
-
-function findChannelByName(guild, name) {
-  const normalize = (value) => value.normalize('NFC').trim().toLowerCase();
-  return guild.channels.cache.find((c) => normalize(c.name) === normalize(name));
-}
+const CHERCHE_MATE_CHANNEL_ID = '1553346964568018984';
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -67,11 +62,13 @@ module.exports = {
     const rang = interaction.fields.getTextInputValue('rang');
     const places = interaction.fields.getTextInputValue('places');
 
-    const channel = findChannelByName(interaction.guild, CHERCHE_MATE_CHANNEL_NAME);
+    const channel =
+      interaction.guild.channels.cache.get(CHERCHE_MATE_CHANNEL_ID) ??
+      (await interaction.guild.channels.fetch(CHERCHE_MATE_CHANNEL_ID).catch(() => null));
 
     if (!channel?.isTextBased()) {
       await interaction.reply({
-        content: `Le salon #${CHERCHE_MATE_CHANNEL_NAME} est introuvable sur ce serveur.`,
+        content: 'Le salon cherche-mate est introuvable sur ce serveur.',
         flags: MessageFlags.Ephemeral
       });
       return;
