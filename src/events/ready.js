@@ -2,6 +2,7 @@ const { Events } = require('discord.js');
 const { startBirthdayScheduler } = require('../utils/birthdayScheduler');
 const { startClipOfTheWeekScheduler } = require('../utils/clipOfTheWeek');
 const { startAgentCacheScheduler } = require('../utils/valorantAgents');
+const { startWeaponCacheScheduler } = require('../utils/valorantWeapons');
 const { startCustomRoleScheduler } = require('../utils/customRoles');
 
 module.exports = {
@@ -12,6 +13,7 @@ module.exports = {
     startBirthdayScheduler(client);
     startClipOfTheWeekScheduler(client);
     startAgentCacheScheduler();
+    startWeaponCacheScheduler();
     startCustomRoleScheduler(client);
   }
 };
