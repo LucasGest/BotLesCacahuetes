@@ -35,9 +35,9 @@ async function fetchRank(name, tag, region) {
   }
 
   const json = await res.json();
-  const patched = json?.data?.currenttierpatched;
+  const patched = json?.data?.current_data?.currenttierpatched;
 
-  if (!patched) {
+  if (!patched || patched === 'Unrated') {
     throw new Error('NO_RANK_DATA');
   }
 
