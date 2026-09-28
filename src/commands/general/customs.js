@@ -8,6 +8,10 @@ const {
   ChannelType,
   MessageFlags
 } = require('discord.js');
+const { addCoins } = require('../../utils/economy');
+const { getCurse, clearCurse } = require('../../utils/agentCurses');
+
+const EVENT_PARTICIPATION_REWARD = 20;
 
 const RANKS = ['Fer', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Ascendant', 'Immortel', 'Radiant'];
 const CUSTOMS_CATEGORY_NAME = '🎮 Customs';
@@ -36,7 +40,10 @@ function buildSessionEmbed(session) {
     return embed;
   }
 
-  const format = (team) => team.map((p) => `• ${p.username} — ${p.rank}`).join('\n') || 'Vide';
+  const format = (team) =>
+    team
+      .map((p) => `• ${p.username} — ${p.rank}${p.curse ? ` (😈 forcé de jouer **${p.curse.agentName}**)` : ''}`)
+      .join('\n') || 'Vide';
 
   embed
     .setDescription('Équipes formées ! Bonne chance 🍀')
@@ -116,6 +123,22 @@ function formTeams(participants) {
   return { teamA, teamB };
 }
 
+// Révèle et consomme les malédictions "agent imposé" (achetées à la
+// boutique) sur les joueurs des deux équipes, une fois les équipes formées.
+async function appliquerAgentsImposes(session) {
+  const allPlayers = [...session.teams.teamA, ...session.teams.teamB];
+
+  await Promise.all(
+    allPlayers.map(async (player) => {
+      const curse = await getCurse(player.id).catch(() => null);
+      if (curse) {
+        player.curse = curse;
+        await clearCurse(player.id).catch(() => {});
+      }
+    })
+  );
+}
+
 async function getOrCreateCustomsCategory(guild) {
   let category = guild.channels.cache.find(
     (channel) => channel.type === ChannelType.GuildCategory && channel.name === CUSTOMS_CATEGORY_NAME
@@ -191,6 +214,7 @@ module.exports = {
       }
 
       session.teams = formTeams(session.participants);
+      await appliquerAgentsImposes(session);
       await interaction.update({ embeds: [buildSessionEmbed(session)], components: buildComponents(session) });
       return;
     }
@@ -280,6 +304,7 @@ module.exports = {
 
     const rank = interaction.values[0];
     const rankValue = RANKS.indexOf(rank) + 1;
+    const isNewParticipant = !session.participants.has(interaction.user.id);
 
     session.participants.set(interaction.user.id, {
       id: interaction.user.id,
@@ -288,7 +313,17 @@ module.exports = {
       rankValue
     });
 
-    await interaction.update({ content: `✅ Inscrit en tant que **${rank}** !`, components: [] });
+    // Bonus de participation "event" une seule fois, pas à chaque changement de rang.
+    if (isNewParticipant) {
+      await addCoins(interaction.user.id, EVENT_PARTICIPATION_REWARD).catch((error) =>
+        console.error('Impossible de créditer la participation customs :', error.message)
+      );
+    }
+
+    await interaction.update({
+      content: `✅ Inscrit en tant que **${rank}** !${isNewParticipant ? ` (+${EVENT_PARTICIPATION_REWARD} 🥜)` : ''}`,
+      components: []
+    });
     await refreshSessionMessage(session, interaction.guild);
   }
 };

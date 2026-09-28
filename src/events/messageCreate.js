@@ -1,5 +1,6 @@
 const { Events } = require('discord.js');
 const { addXp } = require('../utils/xp');
+const { earnFromMessage } = require('../utils/economy');
 const { logError } = require('../utils/logger');
 
 // Enlève les accents (è -> e) puis matche les variantes courantes :
@@ -26,6 +27,12 @@ module.exports = {
       }
     } catch (error) {
       await logError(`XP de ${message.author.tag}`, error);
+    }
+
+    try {
+      await earnFromMessage(message.author.id);
+    } catch (error) {
+      await logError(`Gain de cacahuètes de ${message.author.tag}`, error);
     }
 
     if (mentionsCacahuete(message.content)) {

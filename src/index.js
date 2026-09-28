@@ -13,7 +13,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates
   ],
   // Bloque par défaut les mentions @everyone/@here et de rôles dans TOUT ce
   // que le bot envoie, même si un futur message construit une string à partir

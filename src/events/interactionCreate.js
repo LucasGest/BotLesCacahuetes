@@ -24,6 +24,8 @@ async function routeComponentInteraction(interaction) {
     await command.handleModal(interaction, action);
   } else if (interaction.isStringSelectMenu() && command.handleSelectMenu) {
     await command.handleSelectMenu(interaction, action);
+  } else if (interaction.isUserSelectMenu() && command.handleUserSelect) {
+    await command.handleUserSelect(interaction, action);
   }
 }
 
@@ -63,7 +65,12 @@ module.exports = {
         return;
       }
 
-      if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
+      if (
+        interaction.isButton() ||
+        interaction.isModalSubmit() ||
+        interaction.isStringSelectMenu() ||
+        interaction.isUserSelectMenu()
+      ) {
         await routeComponentInteraction(interaction);
       }
     } catch (error) {
