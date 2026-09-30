@@ -23,6 +23,11 @@ const ROLE_PERSO_DUREE_MS = 7 * 24 * 60 * 60 * 1000;
 // par la boutique, afin qu'un membre ne puisse pas en cumuler plusieurs.
 const COLOR_ROLE_PREFIX = 'Couleur • ';
 
+// Préfixes réservés aux rôles gérés par le bot (boutique couleur, rang
+// automatique /lier-riot) : un rôle perso ne doit pas pouvoir en usurper un,
+// sinon il fausserait la logique de nettoyage de ces autres fonctionnalités.
+const RESERVED_ROLE_PREFIXES = [COLOR_ROLE_PREFIX, '🏅 '];
+
 const COLOR_OPTIONS = [
   { id: 'rouge', label: 'Rouge', color: 0xff4655 },
   { id: 'bleu', label: 'Bleu', color: 0x4f8cff },
@@ -165,9 +170,15 @@ module.exports = {
     if (action !== 'curse-cible') return;
 
     const target = interaction.values[0];
+    const targetUser = interaction.users.get(target);
 
     if (target === interaction.user.id) {
       await interaction.update({ content: 'Tu ne peux pas te viser toi-même 😏', components: [] });
+      return;
+    }
+
+    if (targetUser?.bot) {
+      await interaction.update({ content: 'Tu ne peux pas viser un bot 🤖', components: [] });
       return;
     }
 
@@ -192,6 +203,19 @@ module.exports = {
       const nom = interaction.fields.getTextInputValue('nom').trim();
       const couleurBrute = interaction.fields.getTextInputValue('couleur').trim().replace(/^#/, '');
       const couleur = /^[0-9a-fA-F]{6}$/.test(couleurBrute) ? parseInt(couleurBrute, 16) : 0xc8864b;
+
+      if (!nom) {
+        await interaction.reply({ content: '❌ Le nom du rôle ne peut pas être vide.', flags: MessageFlags.Ephemeral });
+        return;
+      }
+
+      if (RESERVED_ROLE_PREFIXES.some((prefix) => nom.startsWith(prefix))) {
+        await interaction.reply({
+          content: '❌ Ce nom de rôle est réservé, choisis-en un autre.',
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
 
       const success = await removeCoins(interaction.user.id, PRICE_ROLE_PERSO);
       if (!success) {

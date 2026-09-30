@@ -4,6 +4,12 @@ const config = require('../../config');
 
 const RANK_ROLE_PREFIX = '🏅 ';
 
+// La clé API HenrikDev est partagée par tout le serveur : sans cooldown, un
+// membre qui spam la commande pourrait la faire limiter/bannir pour tout le
+// monde. 30s est largement suffisant pour un usage légitime.
+const COOLDOWN_MS = 30_000;
+const lastUseAt = new Map();
+
 const REGIONS = [
   { name: 'Europe', value: 'eu' },
   { name: 'Amérique du Nord', value: 'na' },
@@ -18,9 +24,15 @@ module.exports = {
     .setName('lier-riot')
     .setDescription('Lie ton compte Riot pour récupérer automatiquement ton rôle de rang.')
     .addStringOption((option) =>
-      option.setName('pseudo').setDescription('Ton pseudo Riot (sans le #tag)').setRequired(true)
+      option
+        .setName('pseudo')
+        .setDescription('Ton pseudo Riot (sans le #tag)')
+        .setRequired(true)
+        .setMaxLength(16)
     )
-    .addStringOption((option) => option.setName('tag').setDescription('Ton tag Riot (sans le #)').setRequired(true))
+    .addStringOption((option) =>
+      option.setName('tag').setDescription('Ton tag Riot (sans le #)').setRequired(true).setMaxLength(10)
+    )
     .addStringOption((option) =>
       option
         .setName('region')
@@ -36,6 +48,18 @@ module.exports = {
       });
       return;
     }
+
+    const now = Date.now();
+    const lastUse = lastUseAt.get(interaction.user.id) ?? 0;
+    if (now - lastUse < COOLDOWN_MS) {
+      const remaining = Math.ceil((COOLDOWN_MS - (now - lastUse)) / 1000);
+      await interaction.reply({
+        content: `⏳ Patiente encore ${remaining}s avant de relier ton compte.`,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+    lastUseAt.set(interaction.user.id, now);
 
     const pseudo = interaction.options.getString('pseudo').trim();
     const tag = interaction.options.getString('tag').trim().replace(/^#/, '');
