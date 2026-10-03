@@ -4,6 +4,7 @@ const { startClipOfTheWeekScheduler } = require('../utils/clipOfTheWeek');
 const { startAgentCacheScheduler } = require('../utils/valorantAgents');
 const { startWeaponCacheScheduler } = require('../utils/valorantWeapons');
 const { startCustomRoleScheduler } = require('../utils/customRoles');
+const { startLiveAnnounceScheduler } = require('../utils/liveAnnounce');
 
 module.exports = {
   name: Events.ClientReady,
@@ -15,5 +16,6 @@ module.exports = {
     startAgentCacheScheduler();
     startWeaponCacheScheduler();
     startCustomRoleScheduler(client);
+    startLiveAnnounceScheduler(client);
   }
 };

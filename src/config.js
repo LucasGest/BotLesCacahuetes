@@ -27,5 +27,9 @@ module.exports = {
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL || null,
     privateKey: process.env.FIREBASE_PRIVATE_KEY || null
   },
-  henrikApiKey: process.env.HENRIKDEV_API_KEY || null
+  henrikApiKey: process.env.HENRIKDEV_API_KEY || null,
+  twitch: {
+    clientId: process.env.TWITCH_CLIENT_ID || null,
+    clientSecret: process.env.TWITCH_CLIENT_SECRET || null
+  }
 };
