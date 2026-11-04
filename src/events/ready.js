@@ -10,7 +10,8 @@ module.exports = {
   name: Events.ClientReady,
   once: true,
   execute(client) {
-    console.log(`Connecté en tant que ${client.user.tag}`);
+    const commit = process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local';
+    console.log(`🚀 Bot démarré : connecté en tant que ${client.user.tag} (commit ${commit})`);
     startBirthdayScheduler(client);
     startClipOfTheWeekScheduler(client);
     startAgentCacheScheduler();
