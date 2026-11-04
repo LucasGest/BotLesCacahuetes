@@ -48,6 +48,9 @@ module.exports = {
 
     try {
       if (interaction.isChatInputCommand()) {
+        // console.log : la ligne part aussi dans le salon de logs (voir logger.js).
+        console.log(`⌨️ ${interaction.user.username} (${interaction.user.id}) dans #${interaction.channel?.name ?? interaction.channelId} : ${interaction.toString()}`);
+
         // Les membres non-staff ne peuvent utiliser les commandes que dans le
         // salon #commande, pour ne pas polluer les autres salons. Le staff
         // n'est pas soumis à cette restriction.
