@@ -14,6 +14,7 @@ const {
 const events = require('../../utils/events');
 const { addCoins } = require('../../utils/economy');
 const { crownSupreme } = require('../../utils/supremeRole');
+const { setBotVoiceChannel, inviteChannelMembers, leaveEventVoice } = require('../../utils/eventVoice');
 const { isStaffMember } = require('../../utils/permissions');
 const { logError, logAction } = require('../../utils/logger');
 
@@ -88,7 +89,9 @@ function buildPanel(event, notice) {
   const embed = new EmbedBuilder()
     .setColor(STATUS_COLORS[event.status])
     .setTitle(`🛠️ ${event.name}`)
-    .setDescription(`${STATUS_LABELS[event.status]}\n👥 **${stats.length}** participant(s)`);
+    .setDescription(
+      `${STATUS_LABELS[event.status]}\n👥 **${stats.length}** participant(s)${event.voiceChannelId ? `\n🔊 Vocal suivi : <#${event.voiceChannelId}>` : ''}`
+    );
 
   if (event.status === 'running' && stats.length > 0) {
     embed.addFields({ name: '📊 Scores', value: stats.slice(0, 15).map(statLine).join('\n') });
@@ -96,24 +99,32 @@ function buildPanel(event, notice) {
 
   const button = (action, label, style, disabled = false) =>
     new ButtonBuilder().setCustomId(`event:${action}:${event.id}`).setLabel(label).setStyle(style).setDisabled(disabled);
-  const row = new ActionRowBuilder();
+  const components = [];
 
   if (event.status === 'open') {
-    row.addComponents(
-      button('start', '▶️ Démarrer', ButtonStyle.Success, stats.length === 0),
-      button('cancel', "Annuler l'événement", ButtonStyle.Danger)
+    components.push(
+      new ActionRowBuilder().addComponents(
+        button('start', '▶️ Démarrer', ButtonStyle.Success, stats.length === 0),
+        button('voice', '🔊 Inviter mon vocal', ButtonStyle.Primary),
+        button('cancel', "Annuler l'événement", ButtonStyle.Danger)
+      )
     );
   } else if (event.status === 'running') {
-    row.addComponents(
-      button('mvp', '⭐ MVP', ButtonStyle.Primary),
-      button('win', '🏆 Victoire', ButtonStyle.Primary),
-      button('undo', '↩️ Annuler la dernière action', ButtonStyle.Secondary, event.actions.length === 0),
-      button('finish', '🏁 Terminer', ButtonStyle.Success),
-      button('cancel', "Annuler l'événement", ButtonStyle.Danger)
+    components.push(
+      new ActionRowBuilder().addComponents(
+        button('mvp', '⭐ MVP', ButtonStyle.Primary),
+        button('win', '🏆 Victoire', ButtonStyle.Primary),
+        button('undo', '↩️ Annuler la dernière action', ButtonStyle.Secondary, event.actions.length === 0)
+      ),
+      new ActionRowBuilder().addComponents(
+        button('voice', '🔊 Inviter mon vocal', ButtonStyle.Primary),
+        button('finish', '🏁 Terminer', ButtonStyle.Success),
+        button('cancel', "Annuler l'événement", ButtonStyle.Danger)
+      )
     );
   }
 
-  return { content: notice ?? '', embeds: [embed], components: row.components.length > 0 ? [row] : [] };
+  return { content: notice ?? '', embeds: [embed], components };
 }
 
 function backRow(eventId) {
@@ -180,6 +191,7 @@ async function finishEvent(interaction, eventId, winnerId) {
   }
 
   await refreshAnnouncement(interaction.client, event);
+  await leaveEventVoice(interaction.guild, event).catch((error) => logError(`Vocal de l'événement ${event.id}`, error));
 
   const channel = await interaction.client.channels.fetch(event.channelId).catch(() => null);
   await channel
@@ -310,6 +322,21 @@ async function handleManagement(interaction, action, eventId) {
       break;
     }
 
+    case 'voice': {
+      const channel = interaction.member.voice?.channel;
+
+      if (!channel) {
+        throw new events.EventError("Rejoins d'abord le salon vocal de l'événement, puis réessaie.");
+      }
+
+      const event = await events.watchVoice(eventId, channel.id);
+      setBotVoiceChannel(interaction.guild, channel.id);
+      const counts = await inviteChannelMembers(channel, eventId, interaction.user.id);
+      const closed = counts.closed > 0 ? `\n⚠️ ${counts.closed} personne(s) n'acceptent pas les DM.` : '';
+      await panel(event, `🔊 Je suis dans ${channel}. ${counts.sent} invitation(s) envoyée(s).${closed}`);
+      break;
+    }
+
     case 'mvp':
       await interaction.editReply({
         content: 'Qui est le MVP de cette partie ?',
@@ -361,6 +388,7 @@ async function handleManagement(interaction, action, eventId) {
     case 'cancelok': {
       const event = await events.cancel(eventId);
       await refreshAnnouncement(interaction.client, event);
+      await leaveEventVoice(interaction.guild, event).catch((error) => logError(`Vocal de l'événement ${event.id}`, error));
       await logAction(`❌ Événement « ${event.name} » annulé par ${interaction.user.username}.`);
       await panel(event, '❌ Événement annulé.');
       break;
@@ -455,6 +483,22 @@ module.exports = {
     const eventId = interaction.customId.split(':')[2];
 
     await withEventErrors(interaction, async () => {
+      // Boutons du DM d'invitation : pas de serveur ici, seul le statut
+      // « invité » enregistré sur l'événement autorise l'inscription.
+      if (action === 'invite' || action === 'decline') {
+        await interaction.deferUpdate();
+
+        if (action === 'decline') {
+          await interaction.editReply({ content: "Pas de souci, à la prochaine !", embeds: [], components: [] });
+          return;
+        }
+
+        const event = await events.joinFromInvite(eventId, interaction.user);
+        await refreshAnnouncement(interaction.client, event);
+        await interaction.editReply({ content: `✅ Tu participes à **${event.name}** !`, embeds: [], components: [] });
+        return;
+      }
+
       if (action === 'join' || action === 'leave') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const event = action === 'join' ? await events.join(eventId, interaction.user) : await events.leave(eventId, interaction.user.id);

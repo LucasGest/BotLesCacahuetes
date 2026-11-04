@@ -23,6 +23,8 @@ async function createEvent(data) {
     status: 'open',
     messageId: null,
     participants: {},
+    invited: {},
+    voiceChannelId: null,
     actions: [],
     winnerId: null,
     createdAt: Date.now(),
@@ -91,6 +93,47 @@ function leave(id, userId) {
   return updateEvent(id, (event) => {
     expectStatus(event, 'open', 'Les inscriptions sont fermées : tu ne peux plus te désinscrire.');
     delete event.participants[userId];
+  });
+}
+
+function isActive(event) {
+  return event.status === 'open' || event.status === 'running';
+}
+
+function watchVoice(id, channelId) {
+  return updateEvent(id, (event) => {
+    if (!isActive(event)) {
+      throw new EventError('Cet événement est déjà terminé ou annulé.');
+    }
+    event.voiceChannelId = channelId;
+  });
+}
+
+// Renvoie l'événement si la personne doit recevoir une invitation, sinon null.
+// Transaction : une personne ne peut être invitée qu'une fois par événement.
+async function markInvited(id, userId) {
+  let shouldInvite = false;
+  const updated = await updateEvent(id, (event) => {
+    event.invited ??= {};
+    if (isActive(event) && !event.participants[userId] && !event.invited[userId]) {
+      event.invited[userId] = Date.now();
+      shouldInvite = true;
+    }
+  });
+  return shouldInvite ? updated : null;
+}
+
+// Contrairement au bouton de l'annonce, une invitation reçue reste valable une
+// fois l'événement démarré : la personne est déjà dans le vocal.
+function joinFromInvite(id, user) {
+  return updateEvent(id, (event) => {
+    if (!isActive(event)) {
+      throw new EventError('Cet événement est terminé.');
+    }
+    if (!event.invited?.[user.id]) {
+      throw new EventError("Tu n'as pas été invité(e) à cet événement.");
+    }
+    event.participants[user.id] = { username: user.username, joinedAt: Date.now() };
   });
 }
 
@@ -200,6 +243,9 @@ module.exports = {
   setMessageId,
   join,
   leave,
+  watchVoice,
+  markInvited,
+  joinFromInvite,
   start,
   addAction,
   undoLastAction,
