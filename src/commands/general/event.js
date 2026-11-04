@@ -5,7 +5,6 @@ const {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
-  UserSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -36,6 +35,8 @@ const STATUS_LABELS = {
 const STATUS_COLORS = { open: 0x57f287, running: 0xff4655, finished: 0xffd700, cancelled: 0x747f8d };
 
 const MAX_LISTED_PARTICIPANTS = 35;
+const MAX_MENU_OPTIONS = 25;
+const MAX_PLAYER_MENUS = 4;
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function participantsText(event) {
@@ -133,14 +134,39 @@ function backRow(eventId) {
   );
 }
 
-function userPicker(action, eventId, placeholder, maxValues) {
-  return new ActionRowBuilder().addComponents(
-    new UserSelectMenuBuilder()
-      .setCustomId(`event:${action}:${eventId}`)
-      .setPlaceholder(placeholder)
-      .setMinValues(1)
-      .setMaxValues(maxValues)
-  );
+// Uniquement les inscrits. Discord limite un menu à 25 choix et un message à
+// 5 rangées, dont une pour le bouton Retour : soit 100 joueurs au maximum.
+function playerPickers(action, event, placeholder, multiple) {
+  const players = Object.entries(event.participants)
+    .map(([id, player]) => ({ label: player.username.slice(0, 100), value: id }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const rows = [];
+
+  for (let page = 0; page < MAX_PLAYER_MENUS && page * MAX_MENU_OPTIONS < players.length; page++) {
+    const options = players.slice(page * MAX_MENU_OPTIONS, (page + 1) * MAX_MENU_OPTIONS);
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`event:${action}:${event.id}:${page}`)
+          .setPlaceholder(placeholder)
+          .setMinValues(1)
+          .setMaxValues(multiple ? options.length : 1)
+          .addOptions(options)
+      )
+    );
+  }
+
+  return rows;
+}
+
+function pickerReply(content, action, event, placeholder, multiple = false) {
+  const hidden = Object.keys(event.participants).length - MAX_PLAYER_MENUS * MAX_MENU_OPTIONS;
+  const warning = hidden > 0 ? `\n⚠️ ${hidden} joueur(s) ne peuvent pas être affichés.` : '';
+  return {
+    content: `${content}${warning}`,
+    embeds: [],
+    components: [...playerPickers(action, event, placeholder, multiple), backRow(event.id)]
+  };
 }
 
 // Un message d'annonce supprimé à la main ne doit pas bloquer la gestion de l'événement.
@@ -346,19 +372,15 @@ async function handleManagement(interaction, action, eventId) {
     }
 
     case 'mvp':
-      await interaction.editReply({
-        content: 'Qui est le MVP de cette partie ?',
-        embeds: [],
-        components: [userPicker('setmvp', eventId, 'Choisis le MVP', 1), backRow(eventId)]
-      });
+      await interaction.editReply(
+        pickerReply('Qui est le MVP de cette partie ?', 'setmvp', await events.getEvent(eventId), 'Choisis le MVP')
+      );
       break;
 
     case 'win':
-      await interaction.editReply({
-        content: 'Qui a gagné cette partie ?',
-        embeds: [],
-        components: [userPicker('setwin', eventId, 'Choisis les gagnants', 25), backRow(eventId)]
-      });
+      await interaction.editReply(
+        pickerReply('Qui a gagné cette partie ?', 'setwin', await events.getEvent(eventId), 'Choisis les gagnants', true)
+      );
       break;
 
     case 'undo': {
@@ -369,11 +391,14 @@ async function handleManagement(interaction, action, eventId) {
     }
 
     case 'finish':
-      await interaction.editReply({
-        content: "Qui est le **gagnant de l'événement** ? Il recevra le rôle Cacahuète Suprême.",
-        embeds: [],
-        components: [userPicker('setwinner', eventId, 'Choisis le gagnant', 1), backRow(eventId)]
-      });
+      await interaction.editReply(
+        pickerReply(
+          "Qui est le **gagnant de l'événement** ? Il recevra le rôle Cacahuète Suprême.",
+          'setwinner',
+          await events.getEvent(eventId),
+          'Choisis le gagnant'
+        )
+      );
       break;
 
     case 'finishok':
@@ -532,30 +557,19 @@ module.exports = {
         return;
       }
 
-      if (action !== 'pick') {
-        return;
-      }
-
       if (!isStaffMember(interaction.member)) {
         await replyStaffOnly(interaction);
         return;
       }
 
       await interaction.deferUpdate();
-      await interaction.editReply(buildPanel(await events.getEvent(interaction.values[0])));
-    });
-  },
 
-  async handleUserSelect(interaction, action) {
-    if (!isStaffMember(interaction.member)) {
-      await replyStaffOnly(interaction);
-      return;
-    }
+      if (action === 'pick') {
+        await interaction.editReply(buildPanel(await events.getEvent(interaction.values[0])));
+        return;
+      }
 
-    const eventId = interaction.customId.split(':')[2];
-
-    await withEventErrors(interaction, async () => {
-      await interaction.deferUpdate();
+      const eventId = interaction.customId.split(':')[2];
 
       if (action === 'setmvp') {
         const event = await events.addAction(eventId, 'mvp', interaction.values, interaction.user.id);
