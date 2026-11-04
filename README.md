@@ -132,3 +132,7 @@ npm start
 | Commande | Description |
 | --- | --- |
 | `/ping` | Répond avec la latence du bot. |
+| `/event creer` | Crée et annonce un événement dans #events (staff). |
+| `/event liste` | Affiche les événements à venir et en cours. |
+| `/event gerer` | Panneau du staff : démarrer, MVP, victoires, annulation, fin et gagnant. |
+| `/event classement` | Classement général ou par événement (MVP, victoires). |

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const { isStaffMember } = require('../../utils/permissions');
+const { crownSupreme } = require('../../utils/supremeRole');
 
-const SUPREME_ROLE_ID = '1539941903397818388';
 const SUPREME_ROLE_LABEL = 'Cacahuète Suprême'; // juste pour les messages affichés
 
 module.exports = {
@@ -31,35 +31,13 @@ module.exports = {
       return;
     }
 
-    const role = interaction.guild.roles.cache.get(SUPREME_ROLE_ID);
+    // Le chargement des membres peut dépasser les 3 s laissées par Discord.
+    await interaction.deferReply();
+    const result = await crownSupreme(interaction.guild, winner);
 
-    if (!role) {
-      await interaction.reply({
-        content: `Le rôle ${SUPREME_ROLE_ID} n'existe pas sur ce serveur.`,
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    const botMember = interaction.guild.members.me;
-
-    if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles) || role.position >= botMember.roles.highest.position) {
-      await interaction.reply({
-        content: "Je n'ai pas la permission de gérer les rôles, ou mon rôle est plus bas que celui à attribuer.",
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    try {
-      // Un seul titre à la fois : on le retire à qui l'avait avant.
-      const previousHolders = role.members.filter((member) => member.id !== winner.id);
-      await Promise.all(previousHolders.map((member) => member.roles.remove(role).catch(() => {})));
-
-      await winner.roles.add(role);
-    } catch (error) {
-      console.error(`Impossible d'attribuer le rôle ${SUPREME_ROLE_LABEL} :`, error.message);
-      await interaction.reply({ content: "Erreur lors de l'attribution du rôle.", flags: MessageFlags.Ephemeral });
+    if (!result.ok) {
+      await interaction.deleteReply().catch(() => {});
+      await interaction.followUp({ content: result.reason, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -70,6 +48,6 @@ module.exports = {
       .setThumbnail(winner.user.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };
