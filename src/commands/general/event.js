@@ -14,7 +14,7 @@ const {
 const events = require('../../utils/events');
 const { addCoins } = require('../../utils/economy');
 const { crownSupreme } = require('../../utils/supremeRole');
-const { setBotVoiceChannel, inviteChannelMembers, leaveEventVoice } = require('../../utils/eventVoice');
+const { setBotVoiceChannel, renameChannelForEvent, inviteChannelMembers, leaveEventVoice } = require('../../utils/eventVoice');
 const { isStaffMember } = require('../../utils/permissions');
 const { logError, logAction } = require('../../utils/logger');
 
@@ -329,7 +329,15 @@ async function handleManagement(interaction, action, eventId) {
         throw new events.EventError("Rejoins d'abord le salon vocal de l'événement, puis réessaie.");
       }
 
-      const event = await events.watchVoice(eventId, channel.id);
+      // Si le staff change de vocal, l'ancien salon retrouve son nom d'origine.
+      const previous = await events.getEvent(eventId);
+      const event = await events.watchVoice(eventId, channel.id, channel.name);
+
+      if (previous.voiceChannelId && previous.voiceChannelId !== channel.id) {
+        await leaveEventVoice(interaction.guild, previous);
+      }
+
+      renameChannelForEvent(channel, event);
       setBotVoiceChannel(interaction.guild, channel.id);
       const counts = await inviteChannelMembers(channel, eventId, interaction.user.id);
       const closed = counts.closed > 0 ? `\n⚠️ ${counts.closed} personne(s) n'acceptent pas les DM.` : '';

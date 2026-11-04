@@ -7,6 +7,21 @@ const {
 } = require('discord.js');
 const events = require('./events');
 const { getDb } = require('./firebase');
+const { logError } = require('./logger');
+
+const MAX_CHANNEL_NAME_LENGTH = 100;
+
+// Sans attendre : Discord limite à 2 renommages par salon toutes les 10 minutes,
+// et discord.js patiente alors plusieurs minutes. Le panneau ne doit pas bloquer.
+function renameChannel(channel, name) {
+  if (channel.name !== name) {
+    channel.setName(name).catch((error) => logError(`Renommage du salon ${channel.id}`, error));
+  }
+}
+
+function renameChannelForEvent(channel, event) {
+  renameChannel(channel, `🎉 ${event.name}`.slice(0, MAX_CHANNEL_NAME_LENGTH));
+}
 
 // Pas de lecture audio : le bot est juste présent dans le salon, micro et
 // casque coupés. Une simple mise à jour d'état vocal suffit, sans dépendance.
@@ -73,17 +88,27 @@ async function inviteOnVoiceJoin(member, channelId) {
   }
 }
 
-// Le bot reste si un autre événement actif utilise encore ce salon.
+// Rend son nom au salon et le quitte, sauf si un autre événement actif s'en sert.
 async function leaveEventVoice(guild, event) {
-  if (!event.voiceChannelId || guild.members.me.voice?.channelId !== event.voiceChannelId) {
+  if (!event.voiceChannelId) {
     return;
   }
 
   const current = await events.listEvents(['open', 'running']);
 
-  if (!current.some((e) => e.voiceChannelId === event.voiceChannelId)) {
+  if (current.some((e) => e.id !== event.id && e.voiceChannelId === event.voiceChannelId)) {
+    return;
+  }
+
+  const channel = await guild.channels.fetch(event.voiceChannelId).catch(() => null);
+
+  if (channel && event.voiceChannelName) {
+    renameChannel(channel, event.voiceChannelName);
+  }
+
+  if (guild.members.me.voice?.channelId === event.voiceChannelId) {
     setBotVoiceChannel(guild, null);
   }
 }
 
-module.exports = { setBotVoiceChannel, inviteChannelMembers, inviteOnVoiceJoin, leaveEventVoice };
+module.exports = { setBotVoiceChannel, renameChannelForEvent, inviteChannelMembers, inviteOnVoiceJoin, leaveEventVoice };

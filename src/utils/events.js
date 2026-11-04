@@ -25,6 +25,7 @@ async function createEvent(data) {
     participants: {},
     invited: {},
     voiceChannelId: null,
+    voiceChannelName: null,
     actions: [],
     winnerId: null,
     createdAt: Date.now(),
@@ -100,10 +101,15 @@ function isActive(event) {
   return event.status === 'open' || event.status === 'running';
 }
 
-function watchVoice(id, channelId) {
+// Le nom d'origine n'est retenu qu'une fois par salon : au second clic, le
+// salon porte déjà le nom de l'événement.
+function watchVoice(id, channelId, channelName) {
   return updateEvent(id, (event) => {
     if (!isActive(event)) {
       throw new EventError('Cet événement est déjà terminé ou annulé.');
+    }
+    if (event.voiceChannelId !== channelId || !event.voiceChannelName) {
+      event.voiceChannelName = channelName;
     }
     event.voiceChannelId = channelId;
   });
