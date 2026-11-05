@@ -132,6 +132,7 @@ npm start
 | Commande | Description |
 | --- | --- |
 | `/ping` | Répond avec la latence du bot. |
+| `/roles-jeux` | Crée les rôles de jeux manquants et publie les boutons de choix dans #rôles (staff). |
 | `/event creer` | Crée et annonce un événement dans #events (staff). |
 | `/event liste` | Affiche les événements à venir et en cours. |
 | `/event gerer` | Panneau du staff : démarrer, inviter le vocal par DM, MVP, victoires, annulation, fin et gagnant. |
