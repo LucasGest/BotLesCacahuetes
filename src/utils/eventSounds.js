@@ -36,11 +36,7 @@ const SOUNDS = {
     { freqs: [523, 523], ms: 130, wave: 'square', gap: 30 },
     { freqs: [659, 659], ms: 130, wave: 'square', gap: 30 },
     { freqs: [784, 784], ms: 130, wave: 'square', gap: 30 },
-    { freqs: [1047, 1047], ms: 420, wave: 'square', gap: 350 },
-    { freqs: [311, 311], ms: 330, wave: 'saw', gap: 60 },
-    { freqs: [294, 294], ms: 330, wave: 'saw', gap: 60 },
-    { freqs: [277, 277], ms: 330, wave: 'saw', gap: 60 },
-    { freqs: [262, 247], ms: 1100, wave: 'saw', vibrato: 6 }
+    { freqs: [1047, 1047], ms: 420, wave: 'square' }
   ]
 };
 
