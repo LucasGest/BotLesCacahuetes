@@ -29,13 +29,19 @@ function redact(text) {
 }
 
 function captureConsoleLine(args) {
+  // Une ligne ne doit jamais pouvoir refermer le bloc de code du message.
+  const line = redact(util.format(...args)).replaceAll('```', "'''").slice(0, MAX_LINE_LENGTH);
+
+  // Reconnexions de routine : console de Render uniquement, pas dans le salon.
+  if (/^Shard \d+ /.test(line)) {
+    return;
+  }
+
   if (pendingLines.length >= MAX_PENDING_LINES) {
     droppedLines += 1;
     return;
   }
 
-  // Une ligne ne doit jamais pouvoir refermer le bloc de code du message.
-  const line = redact(util.format(...args)).replaceAll('```', "'''").slice(0, MAX_LINE_LENGTH);
   pendingLines.push(line);
 }
 
