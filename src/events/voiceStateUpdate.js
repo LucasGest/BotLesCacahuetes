@@ -2,6 +2,7 @@ const { Events } = require('discord.js');
 const { addCoins } = require('../utils/economy');
 const { logError } = require('../utils/logger');
 const { inviteOnVoiceJoin } = require('../utils/eventVoice');
+const { playArrivalSound } = require('../utils/eventSounds');
 
 const COINS_PER_MINUTE = 2;
 const MAX_SESSION_MINUTES = 180; // plafond anti-AFK toute la nuit
@@ -24,6 +25,7 @@ module.exports = {
     // Sans attendre : une invitation lente ou en échec ne doit pas gêner le gain vocal.
     if (newState.channelId && newState.channelId !== oldState.channelId) {
       inviteOnVoiceJoin(member, newState.channelId).catch((error) => logError(`Invitation vocale de ${member.user.tag}`, error));
+      playArrivalSound(member, newState.channelId).catch((error) => logError(`Son d'arrivée de ${member.user.tag}`, error));
     }
 
     const wasInVoice = Boolean(oldState.channelId);

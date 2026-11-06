@@ -13,7 +13,8 @@ const {
 const events = require('../../utils/events');
 const { addCoins } = require('../../utils/economy');
 const { crownSupreme } = require('../../utils/supremeRole');
-const { setBotVoiceChannel, renameChannelForEvent, inviteChannelMembers, leaveEventVoice } = require('../../utils/eventVoice');
+const { renameChannelForEvent, inviteChannelMembers, leaveEventVoice } = require('../../utils/eventVoice');
+const { joinChannel, playSound } = require('../../utils/eventSounds');
 const { isStaffMember } = require('../../utils/permissions');
 const { logError, logAction } = require('../../utils/logger');
 
@@ -232,6 +233,8 @@ async function finishEvent(interaction, eventId, winnerId) {
   }
 
   await refreshAnnouncement(interaction.client, event);
+  // On attend la fin du jingle : quitter le vocal le couperait.
+  await playSound(interaction.guild, 'fin');
   await leaveEventVoice(interaction.guild, event).catch((error) => logError(`Vocal de l'événement ${event.id}`, error));
 
   const channel = await interaction.client.channels.fetch(event.channelId).catch(() => null);
@@ -379,7 +382,7 @@ async function handleManagement(interaction, action, eventId) {
       }
 
       renameChannelForEvent(channel, event);
-      setBotVoiceChannel(interaction.guild, channel.id);
+      joinChannel(interaction.guild, channel.id);
       const counts = await inviteChannelMembers(channel, eventId, interaction.user.id);
       const closed = counts.closed > 0 ? `\n⚠️ ${counts.closed} personne(s) n'acceptent pas les DM.` : '';
       await panel(event, `🔊 Je suis dans ${channel}. ${counts.sent} invitation(s) envoyée(s).${closed}`);
@@ -599,6 +602,7 @@ module.exports = {
       if (action === 'setmvp') {
         const event = await events.addAction(eventId, 'mvp', interaction.values, interaction.user.id);
         await interaction.editReply(buildPanel(event, `⭐ MVP ajouté : <@${interaction.values[0]}>`));
+        await playSound(interaction.guild, 'mvp');
       } else if (action === 'setwin') {
         const event = await events.addAction(eventId, 'win', interaction.values, interaction.user.id);
         await interaction.editReply(buildPanel(event, `🏆 Victoire ajoutée : ${interaction.values.map((id) => `<@${id}>`).join(' ')}`));

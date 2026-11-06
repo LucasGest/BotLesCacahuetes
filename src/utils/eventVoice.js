@@ -2,12 +2,12 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
-  GatewayOpcodes
+  EmbedBuilder
 } = require('discord.js');
 const events = require('./events');
 const { getDb } = require('./firebase');
 const { logError } = require('./logger');
+const { currentChannelId, leaveChannel } = require('./eventSounds');
 
 const MAX_CHANNEL_NAME_LENGTH = 100;
 
@@ -21,15 +21,6 @@ function renameChannel(channel, name) {
 
 function renameChannelForEvent(channel, event) {
   renameChannel(channel, `🎉 ${event.name}`.slice(0, MAX_CHANNEL_NAME_LENGTH));
-}
-
-// Pas de lecture audio : le bot est juste présent dans le salon, micro et
-// casque coupés. Une simple mise à jour d'état vocal suffit, sans dépendance.
-function setBotVoiceChannel(guild, channelId) {
-  guild.shard.send({
-    op: GatewayOpcodes.VoiceStateUpdate,
-    d: { guild_id: guild.id, channel_id: channelId, self_mute: true, self_deaf: true }
-  });
 }
 
 function buildInvitation(event) {
@@ -106,9 +97,9 @@ async function leaveEventVoice(guild, event) {
     renameChannel(channel, event.voiceChannelName);
   }
 
-  if (guild.members.me.voice?.channelId === event.voiceChannelId) {
-    setBotVoiceChannel(guild, null);
+  if (currentChannelId(guild) === event.voiceChannelId) {
+    leaveChannel(guild);
   }
 }
 
-module.exports = { setBotVoiceChannel, renameChannelForEvent, inviteChannelMembers, inviteOnVoiceJoin, leaveEventVoice };
+module.exports = { renameChannelForEvent, inviteChannelMembers, inviteOnVoiceJoin, leaveEventVoice };
