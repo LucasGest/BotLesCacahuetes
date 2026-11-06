@@ -235,6 +235,17 @@ function sortStats(stats) {
   return [...stats].sort((a, b) => b.mvp - a.mvp || b.wins - a.wins || b.events - a.events);
 }
 
+// Le ou les 1ers du classement : plusieurs en cas d'égalité sur les MVP et les victoires.
+function topPlayerIds(event) {
+  const [first, ...others] = sortStats(computeStats(event));
+
+  if (!first) {
+    return [];
+  }
+
+  return [first, ...others.filter((entry) => entry.mvp === first.mvp && entry.wins === first.wins)].map((entry) => entry.userId);
+}
+
 function rewardFor(entry) {
   return REWARDS.participation + entry.mvp * REWARDS.mvp + entry.wins * REWARDS.win;
 }
@@ -260,5 +271,6 @@ module.exports = {
   computeStats,
   aggregateStats,
   sortStats,
+  topPlayerIds,
   rewardFor
 };

@@ -136,8 +136,9 @@ function backRow(eventId) {
 
 // Uniquement les inscrits. Discord limite un menu à 25 choix et un message à
 // 5 rangées, dont une pour le bouton Retour : soit 100 joueurs au maximum.
-function playerPickers(action, event, placeholder, multiple) {
+function playerPickers(action, event, placeholder, multiple, onlyIds) {
   const players = Object.entries(event.participants)
+    .filter(([id]) => !onlyIds || onlyIds.includes(id))
     .map(([id, player]) => ({ label: player.username.slice(0, 100), value: id }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const rows = [];
@@ -159,13 +160,27 @@ function playerPickers(action, event, placeholder, multiple) {
   return rows;
 }
 
-function pickerReply(content, action, event, placeholder, multiple = false) {
-  const hidden = Object.keys(event.participants).length - MAX_PLAYER_MENUS * MAX_MENU_OPTIONS;
+function pickerReply(content, action, event, placeholder, multiple = false, onlyIds = null) {
+  const total = onlyIds ? onlyIds.length : Object.keys(event.participants).length;
+  const hidden = total - MAX_PLAYER_MENUS * MAX_MENU_OPTIONS;
   const warning = hidden > 0 ? `\n⚠️ ${hidden} joueur(s) ne peuvent pas être affichés.` : '';
   return {
     content: `${content}${warning}`,
     embeds: [],
-    components: [...playerPickers(action, event, placeholder, multiple), backRow(event.id)]
+    components: [...playerPickers(action, event, placeholder, multiple, onlyIds), backRow(event.id)]
+  };
+}
+
+function finishConfirmation(event, winnerId) {
+  return {
+    content: `🏆 1er de **${event.name}** : <@${winnerId}>.\nIl recevra le rôle Cacahuète Suprême, qui sera retiré à l'ancien détenteur. Les récompenses seront distribuées, et ce sera définitif.`,
+    embeds: [],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`event:finishok:${event.id}:${winnerId}`).setLabel('Oui, terminer').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`event:panel:${event.id}`).setLabel('Non, retour').setStyle(ButtonStyle.Secondary)
+      )
+    ]
   };
 }
 
@@ -390,16 +405,26 @@ async function handleManagement(interaction, action, eventId) {
       break;
     }
 
-    case 'finish':
-      await interaction.editReply(
-        pickerReply(
-          "Qui est le **gagnant de l'événement** ? Il recevra le rôle Cacahuète Suprême.",
-          'setwinner',
-          await events.getEvent(eventId),
-          'Choisis le gagnant'
-        )
-      );
+    case 'finish': {
+      const event = await events.getEvent(eventId);
+      const topIds = events.topPlayerIds(event);
+
+      if (topIds.length === 1) {
+        await interaction.editReply(finishConfirmation(event, topIds[0]));
+      } else {
+        await interaction.editReply(
+          pickerReply(
+            `⚖️ **${topIds.length} joueurs à égalité** pour la 1re place : qui remporte l'événement ?`,
+            'setwinner',
+            event,
+            'Choisis le gagnant',
+            false,
+            topIds
+          )
+        );
+      }
       break;
+    }
 
     case 'finishok':
       await finishEvent(interaction, eventId, interaction.customId.split(':')[3]);
@@ -585,16 +610,7 @@ module.exports = {
           throw new events.EventError('Le gagnant doit être un participant inscrit.');
         }
 
-        await interaction.editReply({
-          content: `Terminer **${event.name}** avec <@${winnerId}> comme gagnant ? Les récompenses seront distribuées, et ce sera définitif.`,
-          embeds: [],
-          components: [
-            new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`event:finishok:${eventId}:${winnerId}`).setLabel('Oui, terminer').setStyle(ButtonStyle.Success),
-              new ButtonBuilder().setCustomId(`event:panel:${eventId}`).setLabel('Non, retour').setStyle(ButtonStyle.Secondary)
-            )
-          ]
-        });
+        await interaction.editReply(finishConfirmation(event, winnerId));
       }
     });
   }
