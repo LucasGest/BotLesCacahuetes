@@ -8,7 +8,7 @@ const {
   ChannelType,
   MessageFlags
 } = require('discord.js');
-const { addCoins } = require('../../utils/economy');
+const { claimCustomsReward } = require('../../utils/economy');
 const { getCurse, clearCurse } = require('../../utils/agentCurses');
 
 const EVENT_PARTICIPATION_REWARD = 20;
@@ -313,15 +313,16 @@ module.exports = {
       rankValue
     });
 
-    // Bonus de participation "event" une seule fois, pas à chaque changement de rang.
-    if (isNewParticipant) {
-      await addCoins(interaction.user.id, EVENT_PARTICIPATION_REWARD).catch((error) =>
-        console.error('Impossible de créditer la participation customs :', error.message)
-      );
-    }
+    // Bonus de participation une seule fois, pas à chaque changement de rang.
+    const rewarded = isNewParticipant
+      ? await claimCustomsReward(interaction.user.id, EVENT_PARTICIPATION_REWARD).catch((error) => {
+          console.error('Impossible de créditer la participation customs :', error.message);
+          return false;
+        })
+      : false;
 
     await interaction.update({
-      content: `✅ Inscrit en tant que **${rank}** !${isNewParticipant ? ` (+${EVENT_PARTICIPATION_REWARD} 🥜)` : ''}`,
+      content: `✅ Inscrit en tant que **${rank}** !${rewarded ? ` (+${EVENT_PARTICIPATION_REWARD} 🥜)` : ''}`,
       components: []
     });
     await refreshSessionMessage(session, interaction.guild);

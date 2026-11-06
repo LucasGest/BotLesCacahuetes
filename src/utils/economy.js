@@ -90,6 +90,30 @@ async function claimDaily(userId) {
   });
 }
 
+// Récompense de participation aux customs : une fois par jour, sinon relancer
+// /customs et s'y inscrire donnerait des cacahuètes sans limite.
+async function claimCustomsReward(userId, amount) {
+  const db = getDb();
+  if (!db) {
+    return false;
+  }
+
+  const ref = db.collection(COLLECTION).doc(userId);
+  const today = todayKey();
+
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const data = doc.exists ? doc.data() : {};
+
+    if (data.lastCustomsRewardDate === today) {
+      return false;
+    }
+
+    tx.set(ref, { balance: (data.balance ?? 0) + amount, lastCustomsRewardDate: today }, { merge: true });
+    return true;
+  });
+}
+
 // Gain passif par message, séparé du cooldown XP pour rester indépendant.
 const MESSAGE_COOLDOWN_MS = 60_000;
 const MESSAGE_MIN = 1;
@@ -110,4 +134,4 @@ async function earnFromMessage(userId) {
   return balance === null ? null : { amount, balance };
 }
 
-module.exports = { getBalance, addCoins, removeCoins, claimDaily, earnFromMessage };
+module.exports = { getBalance, addCoins, removeCoins, claimDaily, claimCustomsReward, earnFromMessage };
