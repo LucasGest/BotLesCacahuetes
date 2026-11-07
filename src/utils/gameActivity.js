@@ -1,5 +1,5 @@
 const { ActivityType, EmbedBuilder } = require('discord.js');
-const { GAMES, IN_GAME_PREFIX, resolveGame, inGameRoleName } = require('./games');
+const { GAMES, IN_GAME_PREFIX, normalizeActivityName, resolveGame, inGameRoleName } = require('./games');
 const { logError } = require('./logger');
 const { safeAddRole } = require('./roleSafety');
 
@@ -20,7 +20,10 @@ const pendingRoles = new Map();
 
 function gamesOf(presence) {
   return [...new Set(
-    (presence?.activities ?? []).filter((a) => a.type === ActivityType.Playing && a.name).map((a) => a.name.trim())
+    (presence?.activities ?? [])
+      .filter((a) => a.type === ActivityType.Playing)
+      .map((a) => normalizeActivityName(a.name))
+      .filter(Boolean)
   )];
 }
 
@@ -37,7 +40,7 @@ function recordStarts(memberId, presence, names) {
   }
 
   for (const activity of presence?.activities ?? []) {
-    const name = activity.name?.trim();
+    const name = normalizeActivityName(activity.name);
     const key = `${memberId}|${name}`;
     if (names.includes(name) && !since.has(key)) {
       since.set(key, activity.timestamps?.start?.getTime?.() ?? Date.now());
