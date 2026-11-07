@@ -9,6 +9,7 @@ const {
 } = require('discord.js');
 const { isStaffMember } = require('../../utils/permissions');
 const { GAMES } = require('../../utils/games');
+const { safeAddRole } = require('../../utils/roleSafety');
 
 const ROLES_CHANNEL_ID = '1567954290012721152'; // #rôles
 
@@ -80,7 +81,7 @@ module.exports = {
       await interaction.member.roles.remove(role);
       await interaction.editReply(`${game.emoji} Rôle **${game.label}** retiré.`);
     } else {
-      await interaction.member.roles.add(role);
+      await safeAddRole(interaction.member, role, 'Rôle de jeu choisi');
       await interaction.editReply(`${game.emoji} Rôle **${game.label}** ajouté !`);
     }
   }

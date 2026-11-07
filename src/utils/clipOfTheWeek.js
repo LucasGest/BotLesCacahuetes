@@ -2,6 +2,7 @@ const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const config = require('../config');
 const { getDb } = require('./firebase');
 const { logError } = require('./logger');
+const { safeAddRole } = require('./roleSafety');
 
 const CLIPS_CHANNEL_ID = '1553346987049353276';
 const WINNER_ROLE_ID = '1553371311747895346';
@@ -108,7 +109,7 @@ async function runWeeklyContest(guild) {
   // Un seul titre à la fois : on le retire à l'ancien détenteur.
   const previousHolders = role.members.filter((member) => member.id !== winner.id);
   await Promise.all(previousHolders.map((member) => member.roles.remove(role).catch(() => {})));
-  await winner.roles.add(role);
+  await safeAddRole(winner, role, 'Clip de la semaine');
 
   await setState(db, {
     lastContestWeek: weekKey,

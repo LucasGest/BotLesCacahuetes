@@ -1,6 +1,7 @@
 const { ActivityType, EmbedBuilder } = require('discord.js');
 const { GAMES, IN_GAME_PREFIX, resolveGame, inGameRoleName } = require('./games');
 const { logError } = require('./logger');
+const { safeAddRole } = require('./roleSafety');
 
 const ACTIVITY_CHANNEL_ID = '1568628826320142414'; // #activité
 const BASE_ROLE_ID = '1539944509566357557'; // 🥜・Cacahuète
@@ -98,12 +99,12 @@ async function syncMemberRoles(member, names) {
     // Le rôle 🎮 du jeu reste acquis : on ne le retire pas quand la partie s'arrête.
     const gameRole = await getOrCreateRole(guild, game.roleName);
     if (gameRole?.editable && !member.roles.cache.has(gameRole.id)) {
-      await member.roles.add(gameRole, 'Jeu détecté').catch((error) => logError(`Rôle ${game.label}`, error));
+      await safeAddRole(member, gameRole, 'Jeu détecté').catch((error) => logError(`Rôle ${game.label}`, error));
     }
 
     const inGameRole = await getOrCreateRole(guild, inGameRoleName(game), { colors: { primaryColor: 0x57f287 }, hoist: true });
     if (inGameRole?.editable && !member.roles.cache.has(inGameRole.id)) {
-      await member.roles.add(inGameRole, 'Partie en cours').catch((error) => logError(`Rôle En jeu ${game.label}`, error));
+      await safeAddRole(member, inGameRole, 'Partie en cours').catch((error) => logError(`Rôle En jeu ${game.label}`, error));
     }
   }
 

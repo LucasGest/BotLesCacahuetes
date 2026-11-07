@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 const { removeCoins, addCoins, getBalance } = require('../../utils/economy');
 const { scheduleRoleExpiry } = require('../../utils/customRoles');
+const { safeAddRole } = require('../../utils/roleSafety');
 const { setCurse } = require('../../utils/agentCurses');
 const { getAgents } = require('../../utils/valorantAgents');
 
@@ -56,7 +57,7 @@ async function getOrCreateColorRole(guild, option) {
   const name = `${COLOR_ROLE_PREFIX}${option.label}`;
   let role = guild.roles.cache.find((r) => r.name === name);
   if (!role) {
-    role = await guild.roles.create({ name, colors: { primaryColor: option.color }, reason: 'Article boutique : couleur de pseudo' });
+    role = await guild.roles.create({ name, colors: { primaryColor: option.color }, permissions: [], reason: 'Article boutique : couleur de pseudo' });
   }
   return role;
 }
@@ -164,7 +165,7 @@ module.exports = {
           await member.roles.remove(previousColorRoles);
         }
 
-        await member.roles.add(role);
+        await safeAddRole(member, role, 'Couleur de pseudo');
         await interaction.editReply({ content: `✅ Tu as maintenant la couleur **${option.label}** !`, components: [] });
       } catch (error) {
         // Remboursé = pas de couleur : on la retire si elle a déjà été donnée.
@@ -259,7 +260,7 @@ module.exports = {
           reason: `Article boutique : rôle perso 7 jours pour ${interaction.user.tag}`
         });
 
-        await interaction.member.roles.add(role);
+        await safeAddRole(interaction.member, role, 'Rôle perso 7 jours');
         await scheduleRoleExpiry(interaction.user.id, role.id, ROLE_PERSO_DUREE_MS);
 
         await interaction.editReply(`✅ Le rôle **${roleName}** t'a été attribué pour 7 jours !`);

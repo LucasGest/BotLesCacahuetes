@@ -1,4 +1,5 @@
 const { PermissionFlagsBits } = require('discord.js');
+const { safeAddRole } = require('./roleSafety');
 
 const SUPREME_ROLE_ID = '1539941903397818388';
 
@@ -25,7 +26,7 @@ async function crownSupreme(guild, winner) {
     await guild.members.fetch();
     const previousHolders = role.members.filter((member) => member.id !== winner.id);
     await Promise.all(previousHolders.map((member) => member.roles.remove(role).catch(() => {})));
-    await winner.roles.add(role);
+    await safeAddRole(winner, role, "Gagnant de l'événement");
     return { ok: true };
   } catch (error) {
     console.error('Impossible d\'attribuer le rôle Cacahuète Suprême :', error.message);

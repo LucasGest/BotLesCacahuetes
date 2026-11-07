@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { fetchRank, toBaseTier } = require('../../utils/riotRank');
 const config = require('../../config');
+const { safeAddRole } = require('../../utils/roleSafety');
 
 const RANK_ROLE_PREFIX = '🏅 ';
 
@@ -99,7 +100,7 @@ module.exports = {
     if (previousRankRoles.size > 0) {
       await member.roles.remove(previousRankRoles);
     }
-    await member.roles.add(role);
+    await safeAddRole(member, role, 'Rang Valorant');
 
     await interaction.editReply(`✅ Compte lié ! Rang actuel : **${patched}** → rôle **${tier}** attribué.`);
   }
