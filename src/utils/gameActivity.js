@@ -73,10 +73,13 @@ async function getOrCreateRole(guild, name, options = {}) {
 
   const creation = (async () => {
     const role = await guild.roles.create({ name, permissions: [], reason: 'Jeu détecté', ...options });
-    // Les rôles « En jeu » sont affichés à part : ils doivent être au-dessus de 🥜・Cacahuète.
+    // Les rôles « En jeu » sont affichés à part : au-dessus de 🥜・Cacahuète et des rôles
+    // achetés (🎟️, couleurs), pour regrouper les joueurs pendant la partie.
     const base = guild.roles.cache.get(BASE_ROLE_ID);
+    const above = [base, ...guild.roles.cache.filter((r) => r.name.startsWith('🎟️・') || r.name.startsWith('Couleur • ') || (r.name.startsWith(IN_GAME_PREFIX) && r.id !== role.id)).values()].filter(Boolean);
     if (options.hoist && base) {
-      await role.setPosition(base.position + 1).catch((error) => logError('Position du rôle En jeu', error));
+      const target = Math.max(...above.map((r) => r.position)) + 1;
+      await role.setPosition(target).catch((error) => logError('Position du rôle En jeu', error));
     }
     return role;
   })()
@@ -105,7 +108,7 @@ async function syncMemberRoles(member, names) {
       await safeAddRole(member, gameRole, 'Jeu détecté').catch((error) => logError(`Rôle ${game.label}`, error));
     }
 
-    const inGameRole = await getOrCreateRole(guild, inGameRoleName(game), { colors: { primaryColor: 0x57f287 }, hoist: true });
+    const inGameRole = await getOrCreateRole(guild, inGameRoleName(game), { hoist: true } /* sans couleur : ne cache pas la couleur achetée */);
     if (inGameRole?.editable && !member.roles.cache.has(inGameRole.id)) {
       await safeAddRole(member, inGameRole, 'Partie en cours').catch((error) => logError(`Rôle En jeu ${game.label}`, error));
     }

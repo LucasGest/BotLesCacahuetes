@@ -26,11 +26,31 @@ const COLOR_ROLE_PREFIX = 'Couleur • ';
 
 // Tous les rôles perso commencent par ce préfixe : ils ne peuvent donc jamais
 // porter le nom d'un rôle géré par le bot (🎮 jeux, 🕹️ En jeu, couleurs, rangs…),
-// que le bot retrouve par leur nom.
-const CUSTOM_ROLE_PREFIX = '👑・';
+// que le bot retrouve par leur nom. Aucun rôle du serveur n'utilise 🎟️ (le 👑
+// est celui du Grand Patron : un rôle acheté ne doit pas lui ressembler).
+const CUSTOM_ROLE_PREFIX = '🎟️・';
+
+// Mots interdits dans un rôle perso, pour qu'il ne puisse pas imiter la hiérarchie.
+const FORBIDDEN_WORDS = ['patron', 'staff', 'recrut', 'responsable', 'admin', 'modo', 'moderat', 'fonda', 'owner', 'chef', 'supreme', 'cacabot', 'everyone', 'here'];
 
 function customRoleName(nom) {
   return nom.startsWith(CUSTOM_ROLE_PREFIX) ? nom : `${CUSTOM_ROLE_PREFIX}${nom}`;
+}
+
+function hasForbiddenWord(nom) {
+  const plain = nom.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  return FORBIDDEN_WORDS.some((word) => plain.includes(word));
+}
+
+// 🥜・Cacahuète est coloré : un rôle acheté placé en dessous verrait sa couleur
+// cachée chez tous les membres. On le place donc juste au-dessus.
+const BASE_ROLE_ID = '1539944509566357557'; // 🥜・Cacahuète
+
+async function placeAboveBase(guild, role) {
+  const base = guild.roles.cache.get(BASE_ROLE_ID);
+  if (base && role.position <= base.position) {
+    await role.setPosition(base.position + 1, { reason: 'Rôle acheté visible au-dessus de 🥜・Cacahuète' });
+  }
 }
 
 const COLOR_OPTIONS = [
@@ -48,7 +68,7 @@ function buildItemsMenu() {
     .setPlaceholder('Choisis un article')
     .addOptions([
       { label: `Couleur de pseudo — ${PRICE_COULEUR} 🥜`, value: 'couleur', emoji: '🎨' },
-      { label: `Rôle perso 7 jours — ${PRICE_ROLE_PERSO} 🥜`, value: 'role', emoji: '👑' },
+      { label: `Rôle perso 7 jours — ${PRICE_ROLE_PERSO} 🥜`, value: 'role', emoji: '🎟️' },
       { label: `Imposer un agent à un pote — ${PRICE_CURSE} 🥜`, value: 'curse', emoji: '😈' }
     ]);
 }
@@ -59,6 +79,7 @@ async function getOrCreateColorRole(guild, option) {
   if (!role) {
     role = await guild.roles.create({ name, colors: { primaryColor: option.color }, permissions: [], reason: 'Article boutique : couleur de pseudo' });
   }
+  await placeAboveBase(guild, role);
   return role;
 }
 
@@ -75,7 +96,7 @@ module.exports = {
       .setDescription(
         `Ton solde : **${balance} 🥜**\n\n` +
           `🎨 **Couleur de pseudo** — ${PRICE_COULEUR} 🥜\n` +
-          `👑 **Rôle perso 7 jours** — ${PRICE_ROLE_PERSO} 🥜\n` +
+          `🎟️ **Rôle perso 7 jours** — ${PRICE_ROLE_PERSO} 🥜\n` +
           `😈 **Imposer un agent à un pote (prochain /customs)** — ${PRICE_CURSE} 🥜`
       );
 
@@ -109,7 +130,7 @@ module.exports = {
 
         const nomInput = new TextInputBuilder()
           .setCustomId('nom')
-          .setLabel('Nom du rôle (👑・ sera ajouté devant)')
+          .setLabel('Nom du rôle (🎟️・ sera ajouté devant)')
           .setStyle(TextInputStyle.Short)
           .setMaxLength(60)
           .setRequired(true);
@@ -240,6 +261,14 @@ module.exports = {
         return;
       }
 
+      if (hasForbiddenWord(nom)) {
+        await interaction.reply({
+          content: '❌ Ce nom imite un rôle de la hiérarchie du serveur (patron, staff, admin…), choisis-en un autre.',
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       // Discord n'attend que 3 s une réponse : on le fait patienter avant les
       // étapes lentes, sinon la réponse échoue et l'achat serait remboursé alors
       // que le rôle a déjà été donné.
@@ -257,8 +286,10 @@ module.exports = {
           name: roleName,
           colors: { primaryColor: couleur },
           permissions: [],
+          hoist: true, // affiché à part dans la liste des membres
           reason: `Article boutique : rôle perso 7 jours pour ${interaction.user.tag}`
         });
+        await placeAboveBase(interaction.guild, role);
 
         await safeAddRole(interaction.member, role, 'Rôle perso 7 jours');
         await scheduleRoleExpiry(interaction.user.id, role.id, ROLE_PERSO_DUREE_MS);
