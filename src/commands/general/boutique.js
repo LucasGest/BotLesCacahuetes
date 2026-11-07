@@ -23,10 +23,14 @@ const ROLE_PERSO_DUREE_MS = 7 * 24 * 60 * 60 * 1000;
 // par la boutique, afin qu'un membre ne puisse pas en cumuler plusieurs.
 const COLOR_ROLE_PREFIX = 'Couleur • ';
 
-// Préfixes réservés aux rôles gérés par le bot (boutique couleur, rang
-// automatique /lier-riot) : un rôle perso ne doit pas pouvoir en usurper un,
-// sinon il fausserait la logique de nettoyage de ces autres fonctionnalités.
-const RESERVED_ROLE_PREFIXES = [COLOR_ROLE_PREFIX, '🏅 '];
+// Tous les rôles perso commencent par ce préfixe : ils ne peuvent donc jamais
+// porter le nom d'un rôle géré par le bot (🎮 jeux, 🕹️ En jeu, couleurs, rangs…),
+// que le bot retrouve par leur nom.
+const CUSTOM_ROLE_PREFIX = '👑・';
+
+function customRoleName(nom) {
+  return nom.startsWith(CUSTOM_ROLE_PREFIX) ? nom : `${CUSTOM_ROLE_PREFIX}${nom}`;
+}
 
 const COLOR_OPTIONS = [
   { id: 'rouge', label: 'Rouge', color: 0xff4655 },
@@ -52,7 +56,7 @@ async function getOrCreateColorRole(guild, option) {
   const name = `${COLOR_ROLE_PREFIX}${option.label}`;
   let role = guild.roles.cache.find((r) => r.name === name);
   if (!role) {
-    role = await guild.roles.create({ name, color: option.color, reason: 'Article boutique : couleur de pseudo' });
+    role = await guild.roles.create({ name, colors: { primaryColor: option.color }, reason: 'Article boutique : couleur de pseudo' });
   }
   return role;
 }
@@ -104,7 +108,7 @@ module.exports = {
 
         const nomInput = new TextInputBuilder()
           .setCustomId('nom')
-          .setLabel('Nom du rôle')
+          .setLabel('Nom du rôle (👑・ sera ajouté devant)')
           .setStyle(TextInputStyle.Short)
           .setMaxLength(60)
           .setRequired(true);
@@ -141,14 +145,18 @@ module.exports = {
       const option = COLOR_OPTIONS.find((o) => o.id === interaction.values[0]);
       if (!option) return;
 
+      // Même raison que pour le rôle perso : répondre à Discord avant les étapes lentes.
+      await interaction.deferUpdate();
+
       const success = await removeCoins(interaction.user.id, PRICE_COULEUR);
       if (!success) {
-        await interaction.update({ content: '❌ Solde insuffisant.', components: [] });
+        await interaction.editReply({ content: '❌ Solde insuffisant.', components: [] });
         return;
       }
 
+      let role = null;
       try {
-        const role = await getOrCreateColorRole(interaction.guild, option);
+        role = await getOrCreateColorRole(interaction.guild, option);
         const member = interaction.member;
 
         const previousColorRoles = member.roles.cache.filter((r) => r.name.startsWith(COLOR_ROLE_PREFIX));
@@ -157,10 +165,14 @@ module.exports = {
         }
 
         await member.roles.add(role);
-        await interaction.update({ content: `✅ Tu as maintenant la couleur **${option.label}** !`, components: [] });
+        await interaction.editReply({ content: `✅ Tu as maintenant la couleur **${option.label}** !`, components: [] });
       } catch (error) {
+        // Remboursé = pas de couleur : on la retire si elle a déjà été donnée.
+        if (role) {
+          await interaction.member.roles.remove(role).catch(() => {});
+        }
         await addCoins(interaction.user.id, PRICE_COULEUR);
-        await interaction.update({ content: "❌ Une erreur est survenue, tu as été remboursé.", components: [] });
+        await interaction.editReply({ content: '❌ Une erreur est survenue, tu as été remboursé.', components: [] }).catch(() => {});
         throw error;
       }
     }
@@ -209,37 +221,53 @@ module.exports = {
         return;
       }
 
-      if (RESERVED_ROLE_PREFIXES.some((prefix) => nom.startsWith(prefix))) {
+      // Copier un rôle du serveur (🥜・Cacahuète Suprême, staff…) est refusé ; les
+      // rôles de jeu sont libres d'accès, donc reprendre leur nom ne trompe personne.
+      const roleName = customRoleName(nom);
+      const isGameRole = (name) => name.startsWith('🎮・') || name.startsWith('🕹️・');
+      const taken = interaction.guild.roles.cache.some(
+        (role) =>
+          role.name.toLowerCase() === roleName.toLowerCase() ||
+          (role.name.toLowerCase() === nom.toLowerCase() && !isGameRole(role.name))
+      );
+
+      if (taken) {
         await interaction.reply({
-          content: '❌ Ce nom de rôle est réservé, choisis-en un autre.',
+          content: '❌ Ce nom est déjà celui d\'un rôle du serveur, choisis-en un autre.',
           flags: MessageFlags.Ephemeral
         });
         return;
       }
 
+      // Discord n'attend que 3 s une réponse : on le fait patienter avant les
+      // étapes lentes, sinon la réponse échoue et l'achat serait remboursé alors
+      // que le rôle a déjà été donné.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const success = await removeCoins(interaction.user.id, PRICE_ROLE_PERSO);
       if (!success) {
-        await interaction.reply({ content: '❌ Solde insuffisant.', flags: MessageFlags.Ephemeral });
+        await interaction.editReply('❌ Solde insuffisant.');
         return;
       }
 
+      let role = null;
       try {
-        const role = await interaction.guild.roles.create({
-          name: nom,
-          color: couleur,
+        role = await interaction.guild.roles.create({
+          name: roleName,
+          colors: { primaryColor: couleur },
+          permissions: [],
           reason: `Article boutique : rôle perso 7 jours pour ${interaction.user.tag}`
         });
 
         await interaction.member.roles.add(role);
         await scheduleRoleExpiry(interaction.user.id, role.id, ROLE_PERSO_DUREE_MS);
 
-        await interaction.reply({
-          content: `✅ Le rôle **${nom}** t'a été attribué pour 7 jours !`,
-          flags: MessageFlags.Ephemeral
-        });
+        await interaction.editReply(`✅ Le rôle **${roleName}** t'a été attribué pour 7 jours !`);
       } catch (error) {
+        // Remboursé = pas de rôle : on retire ce qui a déjà été créé.
+        await role?.delete('Achat de rôle perso annulé').catch(() => {});
         await addCoins(interaction.user.id, PRICE_ROLE_PERSO);
-        await interaction.reply({ content: '❌ Une erreur est survenue, tu as été remboursé.', flags: MessageFlags.Ephemeral });
+        await interaction.editReply('❌ Une erreur est survenue, tu as été remboursé.').catch(() => {});
         throw error;
       }
       return;
