@@ -5,6 +5,9 @@ const { startAgentCacheScheduler } = require('../utils/valorantAgents');
 const { startWeaponCacheScheduler } = require('../utils/valorantWeapons');
 const { startCustomRoleScheduler } = require('../utils/customRoles');
 const { startLiveAnnounceScheduler } = require('../utils/liveAnnounce');
+const { startGameActivity } = require('../utils/gameActivity');
+const { logError } = require('../utils/logger');
+const config = require('../config');
 
 module.exports = {
   name: Events.ClientReady,
@@ -18,5 +21,6 @@ module.exports = {
     startWeaponCacheScheduler();
     startCustomRoleScheduler(client);
     startLiveAnnounceScheduler(client);
+    startGameActivity(client, config.guildId).catch((error) => logError('Détection des jeux (démarrage)', error));
   }
 };

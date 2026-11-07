@@ -8,15 +8,9 @@ const {
   MessageFlags
 } = require('discord.js');
 const { isStaffMember } = require('../../utils/permissions');
+const { GAMES } = require('../../utils/games');
 
 const ROLES_CHANNEL_ID = '1567954290012721152'; // #rôles
-
-const GAMES = [
-  { key: 'among-us', label: 'Among Us', emoji: '🔪', roleName: '🎮・Among Us' },
-  { key: 'valorant', label: 'Valorant', emoji: '🎯', roleName: '🎮・Valorant' },
-  { key: 'rocket-league', label: 'Rocket League', emoji: '🚗', roleName: '🎮・Rocket League' },
-  { key: 'minecraft', label: 'Minecraft', emoji: '⛏️', roleName: '🎮・Minecraft' }
-];
 
 function findRole(guild, game) {
   return guild.roles.cache.find((role) => role.name === game.roleName);
