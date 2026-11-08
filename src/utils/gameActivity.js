@@ -9,6 +9,7 @@ const BOARD_DELAY_MS = 3_000;
 const ROLE_LIMIT = 230;
 const RESYNC_INTERVAL_MS = 60 * 60 * 1000; // revérification complète toutes les heures
 const MAX_PLAYERS_PER_GAME = 15;
+const BOARD_TITLE = '🎮 Qui joue en ce moment ?';
 
 // Jeux en cours par membre, reconstruits depuis les présences : rien n'est
 // enregistré, la liste repart de ce que Discord envoie au démarrage.
@@ -154,7 +155,7 @@ function buildBoard(guild) {
   const embed = new EmbedBuilder()
     .setColor(sorted.length ? 0x57f287 : 0x4f545c)
     .setAuthor({ name: 'Les Cacahuètes · Activité', iconURL: icon ?? undefined })
-    .setTitle('🎮 Qui joue en ce moment ?')
+    .setTitle(BOARD_TITLE)
     .setThumbnail(icon)
     .setFooter({ text: '🥜 Mis à jour en direct' })
     .setTimestamp();
@@ -193,8 +194,9 @@ function buildBoard(guild) {
 // Un seul message, modifié à chaque changement plutôt que de remplir le salon.
 async function updateBoard(client) {
   const channel = await client.channels.fetch(ACTIVITY_CHANNEL_ID);
-  const recent = await channel.messages.fetch({ limit: 10 });
-  const message = recent.find((m) => m.author.id === client.user.id);
+  const recent = await channel.messages.fetch({ limit: 100 });
+  // Le salon contient aussi le top vocal du dimanche : on retrouve le tableau par son titre.
+  const message = recent.find((m) => m.author.id === client.user.id && m.embeds?.[0]?.title === BOARD_TITLE);
   const payload = { embeds: [buildBoard(channel.guild)], allowedMentions: { parse: [] } };
 
   if (message) {

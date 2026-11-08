@@ -3,17 +3,27 @@ const { addCoins } = require('../utils/economy');
 const { logError } = require('../utils/logger');
 const { inviteOnVoiceJoin } = require('../utils/eventVoice');
 const { playArrivalSound } = require('../utils/eventSounds');
+const { onVoiceStateUpdate } = require('../utils/voiceRanking');
 
 const COINS_PER_MINUTE = 2;
 const MAX_SESSION_MINUTES = 180; // plafond anti-AFK toute la nuit
 
-// État en mémoire (heure d'arrivée en vocal par membre) : si le bot redémarre
-// pendant qu'un membre est en vocal, sa session en cours n'est juste pas
-// comptée jusqu'à la prochaine fois qu'il rejoint — acceptable, pas besoin
-// de persister ça.
+// État en mémoire (heure d'arrivée en vocal par membre). Au démarrage, le bot
+// reprend les membres déjà en vocal (voir seedVoiceSessions) : seul le temps
+// d'avant le redémarrage est perdu, plus toute la session.
 const voiceJoinTimes = new Map();
 
+function seedVoiceSessions(guild) {
+  const now = Date.now();
+  for (const voiceState of guild.voiceStates.cache.values()) {
+    if (voiceState.channelId && voiceState.member && !voiceState.member.user.bot && !voiceJoinTimes.has(voiceState.id)) {
+      voiceJoinTimes.set(voiceState.id, now);
+    }
+  }
+}
+
 module.exports = {
+  seedVoiceSessions,
   name: Events.VoiceStateUpdate,
   async execute(oldState, newState) {
     const member = newState.member ?? oldState.member;
@@ -21,6 +31,9 @@ module.exports = {
     if (!member || member.user.bot) {
       return;
     }
+
+    // Classement vocal : sans attendre, une erreur Firestore ne doit pas bloquer le reste.
+    onVoiceStateUpdate(oldState, newState).catch((error) => logError(`Classement vocal de ${member.user.tag}`, error));
 
     // Sans attendre : une invitation lente ou en échec ne doit pas gêner le gain vocal.
     if (newState.channelId && newState.channelId !== oldState.channelId) {
