@@ -77,7 +77,9 @@ async function getOrCreateRole(guild, name, options = {}) {
     // Les rôles « En jeu » sont affichés à part : au-dessus de 🥜・Cacahuète et des rôles
     // achetés (🎟️, couleurs), pour regrouper les joueurs pendant la partie.
     const base = guild.roles.cache.get(BASE_ROLE_ID);
-    const above = [base, ...guild.roles.cache.filter((r) => r.name.startsWith('🎟️・') || r.name.startsWith('Couleur • ') || (r.name.startsWith(IN_GAME_PREFIX) && r.id !== role.id)).values()].filter(Boolean);
+    // Juste au-dessus des rôles achetés, jamais au-dessus des autres « En jeu » : sinon
+    // chaque nouveau jeu montait d'un cran jusqu'à atteindre le rôle du bot (Missing Permissions).
+    const above = [base, ...guild.roles.cache.filter((r) => r.name.startsWith('🎟️・') || r.name.startsWith('Couleur • ')).values()].filter(Boolean);
     if (options.hoist && base) {
       const target = Math.max(...above.map((r) => r.position)) + 1;
       await role.setPosition(target).catch((error) => logError('Position du rôle En jeu', error));
