@@ -11,6 +11,8 @@ const FLUSH_INTERVAL_MS = 10 * 60 * 1000; // enregistre les sessions en cours to
 const WEEKLY_CHECK_MS = 5 * 60 * 1000;
 const REWARDS = [300, 200, 100];
 const TOP_SIZE = 10;
+// Le classement démarre le lundi 9 novembre 2026 à 0 h (Paris) : rien n'est compté avant.
+const START_AT = Date.parse('2026-11-08T23:00:00Z');
 
 // Sessions comptées en ce moment : membre → { start, counted, username }.
 // « counted » = minutes déjà enregistrées pendant cette session (pour le plafond).
@@ -121,7 +123,7 @@ function pendingMinutes(userId, now = Date.now()) {
   if (!segment) {
     return 0;
   }
-  const elapsed = Math.max(0, (now - segment.start) / 60_000);
+  const elapsed = Math.max(0, (now - Math.max(segment.start, START_AT)) / 60_000);
   return Math.min(elapsed, Math.max(0, SESSION_CAP_MINUTES - segment.counted));
 }
 
@@ -311,5 +313,6 @@ module.exports = {
   isEligible,
   segments,
   flushAll,
-  postWeeklyRanking
+  postWeeklyRanking,
+  pendingMinutes
 };
