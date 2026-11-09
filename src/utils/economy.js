@@ -114,6 +114,35 @@ async function claimCustomsReward(userId, amount) {
   });
 }
 
+// Récompense des défis Valorant : validés à l'honneur, donc plafonnés par jour
+// pour qu'enchaîner les /defi-valorant ne crée pas des cacahuètes à l'infini.
+// Retourne le montant réellement crédité (0 si le plafond est atteint).
+const CHALLENGE_DAILY_MAX = 150;
+
+async function claimChallengeReward(userId, amount) {
+  const db = getDb();
+  if (!db || amount <= 0) {
+    return 0;
+  }
+
+  const ref = db.collection(COLLECTION).doc(userId);
+  const today = todayKey();
+
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const data = doc.exists ? doc.data() : {};
+    const earned = data.challengeDate === today ? (data.challengeEarned ?? 0) : 0;
+    const granted = Math.max(0, Math.min(amount, CHALLENGE_DAILY_MAX - earned));
+
+    tx.set(ref, {
+      balance: (data.balance ?? 0) + granted,
+      challengeDate: today,
+      challengeEarned: earned + granted
+    }, { merge: true });
+    return granted;
+  });
+}
+
 // Gain passif par message, séparé du cooldown XP pour rester indépendant.
 const MESSAGE_COOLDOWN_MS = 60_000;
 const MESSAGE_MIN = 1;
@@ -134,4 +163,4 @@ async function earnFromMessage(userId) {
   return balance === null ? null : { amount, balance };
 }
 
-module.exports = { getBalance, addCoins, removeCoins, claimDaily, claimCustomsReward, earnFromMessage };
+module.exports = { getBalance, addCoins, removeCoins, claimDaily, claimCustomsReward, claimChallengeReward, CHALLENGE_DAILY_MAX, earnFromMessage };
