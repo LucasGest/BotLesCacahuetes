@@ -1,139 +1,96 @@
-# Les Cacahuètes Bot
+# Bot CloudyCat 🐾
 
-Bot Discord de départ construit avec [discord.js](https://discord.js.org/).
+Bot Discord du serveur **CloudyCat** ☁️🐱 (ex-« Les Cacahuètes »), en [discord.js](https://discord.js.org/) v14. Hébergé sur Render, données sur Firebase (Firestore).
 
-## Prérequis
+## Ce que fait le bot
 
-- Node.js 18.17 ou plus récent
-- Une application créée sur le [Discord Developer Portal](https://discord.com/developers/applications)
+- **Accueil** : message de bienvenue et souhaits d'anniversaire.
+- **Économie en 🐾 pattes** : gain en écrivant et en vocal, `/daily`, `/boutique` (couleur de pseudo, rôle perso 7 jours, imposer un agent).
+- **Valorant** : `/lier-riot` (rôle de rang automatique), `/customs` (équipes équilibrées par rang), `/defi-valorant`, `/agent-random`, `/arme-random`, `/crosshair`, `/mes-agents`.
+- **Activité** : détection des jeux lancés (rôles 🎮 et 🕹️ En jeu, tableau « Qui joue en ce moment ? »), classement vocal de la semaine avec récompenses le dimanche.
+- **Communauté** : `/cherche-mate`, `/sondage`, XP et niveaux (`/rank`, `/leaderboard`), annonces de live Twitch.
+- **Staff** : tickets, modération (`/ban`, `/kick`, `/timeout`, `/unmute`, `/warn`, `/clear`), `/roles-jeux`.
+
+## Commandes
+
+| Commande | Description |
+| --- | --- |
+| `/agent-random` | Tire un agent Valorant parmi ceux que tu as débloqués. |
+| `/anniversaire` | Définit ou retire ton anniversaire. |
+| `/arme-random` | Tire une arme principale au hasard. |
+| `/boutique` | Dépense tes pattes contre des avantages. |
+| `/cherche-mate` | Cherche un mate pour jouer (mode, rang, places). |
+| `/classement-vocal` | Classement du temps passé en vocal (semaine, mois, total). |
+| `/crosshair` | Partage ou consulte un code de viseur Valorant. |
+| `/customs` | Session de customs : inscriptions et équipes équilibrées par rang. |
+| `/daily` | Récupère tes pattes du jour (bonus de série). |
+| `/defi-valorant` | 5 défis Valorant au hasard, validés à l'honneur, récompensés en pattes. |
+| `/leaderboard` | Membres les plus actifs. |
+| `/lier-riot` | Lie ton compte Riot pour obtenir ton rôle de rang. |
+| `/mes-agents` | Gère la liste de tes agents débloqués. |
+| `/ping` | Latence du bot. |
+| `/rank` | Niveau et XP d'un membre. |
+| `/solde` | Solde de pattes d'un membre. |
+| `/sondage` | Sondage rapide, jusqu'à 5 options. |
+| `/ban`, `/kick`, `/timeout`, `/unmute`, `/warn`, `/clear` | Modération (staff). |
+| `/roles-jeux` | Publie le choix des rôles de jeux (staff). |
+| `/ticket-setup` | Publie le message d'ouverture de ticket (staff). |
+
+Les commandes ne s'utilisent que dans le salon #commande, sauf pour le staff.
 
 ## Installation
+
+Node.js 18.17 ou plus récent.
 
 ```bash
 npm install
 ```
 
-Remplis `.env` à la racine avec :
+Copie `.env.example` en `.env` et remplis-le : `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, et en option `LOG_CHANNEL_ID`, `STAFF_ROLE_IDS`, les identifiants Firebase, `HENRIKDEV_API_KEY` (Valorant) et `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET`. Une fonctionnalité dont la clé manque est simplement désactivée.
 
-- `DISCORD_TOKEN` : le token du bot, depuis l'onglet **Bot**
-- `DISCORD_CLIENT_ID` : l'Application ID, depuis **General Information**
-- `DISCORD_GUILD_ID` : l'identifiant du serveur de test
+`.env` et la clé Firebase (`*firebase-adminsdk*.json`) ne sont jamais commités (voir `.gitignore`).
 
-Ne partage jamais le contenu de `.env` et ne publie jamais le token. `.env.example` liste les mêmes clés sans valeurs, à commiter à la place.
+```bash
+npm run deploy   # enregistre les commandes slash sur le serveur
+npm start        # lance le bot
+```
+
+Sur Render, un push sur `master` redéploie et redémarre le bot. Après un ajout ou un retrait de commande, relancer `npm run deploy`.
+
+## Inviter le bot
+
+Sans Administrateur, avec uniquement les permissions utilisées par le code (modération, rôles, salons, vocal, messages) :
+
+```
+https://discord.com/oauth2/authorize?client_id=1553356954351570944&permissions=1099800505430&integration_type=0&scope=bot+applications.commands
+```
+
+Ensuite, placer le rôle du bot **sous les rôles staff** et **au-dessus des rôles qu'il gère** (rôle de base, 🕹️ En jeu, 🎮 jeux, 🏅 rangs, 🎟️ et couleurs de la boutique).
 
 ## Sécurité
 
-### Secrets
+- **Serveur unique** : `interactionCreate.js` ignore toute interaction venant d'un autre serveur que `DISCORD_GUILD_ID`.
+- **Staff** : les commandes et boutons réservés vérifient `isStaffMember()` (`STAFF_ROLE_IDS`) en plus des permissions Discord.
+- **Rôles** : `roleSafety.js` refuse de donner un rôle qui porterait une permission (modération, admin…), même via la boutique.
+- **Mentions** : `allowedMentions` limite les pings ; aucun texte d'utilisateur ne peut déclencher `@everyone`.
+- **Anti-abus économique** : plafonds journaliers (daily, customs, défis à 150 🐾/jour), plafond anti-AFK en vocal.
+- **Stabilité** : chaque commande et chaque event est protégé par un `try/catch` ; les erreurs vont dans la console et dans le salon de logs.
 
-Token et IDs uniquement dans `.env` (jamais commité, voir `.gitignore`). Aucun secret codé en dur ni affiché dans les logs : `index.js` logge le *message* d'erreur de connexion, jamais le token lui-même.
+## Intents
 
-### Intents
-
-Seuls deux intents sont activés, chacun justifié par une fonctionnalité réelle :
-
-- `Guilds` : obligatoire pour que le bot sache dans quels serveurs/salons il est, base de tout le reste.
-- `GuildMembers` (privilégié — à activer dans **Bot > Privileged Gateway Intents**) : nécessaire pour le message de bienvenue (`guildMemberAdd`) et pour `member.guild.memberCount`.
-
-Aucun intent lié aux messages (`GuildMessages`, `MessageContent`) : le bot ne lit aucun contenu de message pour l'instant. À ajouter seulement si une fonctionnalité future le demande vraiment.
-
-### Inviter le bot (permissions minimales, sans Administrateur)
-
-Scopes `bot` + `applications.commands`, permissions strictement limitées à ce qu'utilisent les fonctionnalités actuelles (Voir les salons, Envoyer des messages, Intégrer des liens — pour l'embed de bienvenue) :
-
-```
-https://discord.com/api/oauth2/authorize?client_id=1553356954351570944&permissions=19456&scope=bot%20applications.commands
-```
-
-Si une future fonctionnalité a besoin d'une permission de plus (ex: gérer les rôles pour les candidatures), ajoute-la explicitement dans ce lien plutôt que de mettre Administrateur.
-
-### Mentions
-
-Le client est configuré avec `allowedMentions: { parse: ['users'] }` : aucun message envoyé par le bot ne peut déclencher un ping `@everyone`, `@here` ou de rôle, même si un futur message construit du texte à partir d'une entrée utilisateur. Les mentions directes d'un membre (ex: message de bienvenue) restent autorisées.
-
-### Contrôle d'accès
-
-- `interactionCreate.js` vérifie `interaction.guildId` contre l'ID du serveur configuré et ignore tout le reste — le bot ne traite rien si le token venait à fuiter et être utilisé ailleurs.
-- `src/utils/permissions.js` expose `isStaffMember(member)`, basé sur `STAFF_ROLE_IDS` (`.env`). **Pas encore utilisé** (aucune commande staff n'existe encore) : quand tickets/candidatures seront construits, chaque bouton/commande réservé au staff doit appeler cette fonction en plus de `setDefaultMemberPermissions` — ne jamais se fier qu'à Discord pour ça.
-
-### Stabilité et logs
-
-- Chaque commande et chaque event tourne dans un `try/catch` (posé une fois pour toutes dans `index.js` pour les events, dans `interactionCreate.js` pour les commandes) : une erreur n'affiche jamais de détail technique à l'utilisateur, juste "Il y a eu une erreur...".
-- `process.on('unhandledRejection'/'uncaughtException')` empêchent un crash silencieux.
-- `src/utils/logger.js` centralise le logging : toujours en console, et en plus dans un salon Discord privé si `LOG_CHANNEL_ID` est renseigné dans `.env`.
-
-### À appliquer quand les fonctionnalités correspondantes existeront
-
-Ces points de la checklist sécurité ne s'appliquent à aucun code existant aujourd'hui (pas de tickets, candidatures, ou vocaux auto) — à mettre en place au moment de construire ces fonctionnalités, pas avant :
-
-- **Boutons Accepter/Refuser/Fermer** : vérifier `isStaffMember(interaction.member)` avant d'exécuter l'action, en plus de la permission Discord sur la commande qui a créé le bouton.
-- **Attribution de rôle** (candidature acceptée) : avant d'appeler `member.roles.add(role)`, vérifier `guild.members.me.permissions.has('ManageRoles')` ET que `role.position < guild.members.me.roles.highest.position` — sinon Discord refuse silencieusement ou lève une erreur selon le cas.
-- **Un ticket/candidature à la fois par utilisateur** : garder l'ID du ticket ouvert (ex: dans le topic du salon, comme fait dans une version précédente de ce bot) et refuser d'en créer un second.
-- **Cooldowns** : un `Map<userId, timestamp>` en mémoire suffit pour limiter la fréquence d'une commande/bouton, pas besoin de base de données pour ça.
-- **Limite sur les vocaux automatiques** : plafonner le nombre de salons vocaux créés simultanément par le bot (ex: max N actifs), et les supprimer automatiquement quand ils se vident.
-- **Validation des `customId`** : préfixer chaque `customId` par un nom d'action stable (ex: `ticket_close_<id>`) et vérifier ce préfixe avant de parser le reste, plutôt que de faire confiance à la forme du `customId` reçu.
-- **Entrées de formulaire (modals)** : `TextInputBuilder.setMaxLength(...)` sur chaque champ, et échapper/normaliser le texte avant de le réafficher dans un embed (déjà fait pour le message de bienvenue via les mentions bloquées, à répéter pour tout texte libre affiché).
+`Guilds`, `GuildMembers`, `GuildMessages`, `MessageContent` (XP et gains par message), `GuildVoiceStates` (vocal), `GuildPresences` (détection des jeux). Les trois intents privilégiés sont à activer dans **Bot → Privileged Gateway Intents**.
 
 ## Structure
 
 ```
 src/
-  commands/
-    general/
-      ping.js
-  events/
-    ready.js
-    interactionCreate.js
-    guildMemberAdd.js
-  utils/
-    logger.js
-    permissions.js
+  commands/general/   commandes pour tous
+  commands/staff/     commandes réservées au staff
+  events/             events Discord (ready, interactionCreate, guildMemberAdd…)
+  utils/              économie, XP, rôles, Firestore, logs, activité, classement vocal…
   config.js
   deploy-commands.js
   index.js
 ```
 
-Chaque commande est un fichier sous `src/commands/<catégorie>/`, qui exporte :
-
-```js
-module.exports = {
-  data: new SlashCommandBuilder().setName('...').setDescription('...'),
-  async execute(interaction) { ... }
-};
-```
-
-`index.js` charge automatiquement tous les fichiers de `src/commands/` (peu importe la catégorie) et de `src/events/` — ajouter une commande ou un event ne demande jamais de toucher `index.js`, juste de déposer le fichier au bon endroit.
-
-Chaque event est un fichier sous `src/events/`, qui exporte :
-
-```js
-module.exports = {
-  name: Events.NomDeLevent,
-  once: false, // true pour un event qui ne doit se déclencher qu'une fois (ex: ready)
-  execute(...args) { ... }
-};
-```
-
-## Lancer
-
-Déploie les commandes slash sur ton serveur :
-
-```bash
-npm run deploy
-```
-
-Puis démarre le bot :
-
-```bash
-npm start
-```
-
-## Commandes disponibles
-
-| Commande | Description |
-| --- | --- |
-| `/ping` | Répond avec la latence du bot. |
-| `/roles-jeux` | Crée les rôles de jeux manquants et publie les boutons de choix dans #rôles (staff). |
-| `/event creer` | Crée et annonce un événement dans #events (staff). |
-| `/event liste` | Affiche les événements à venir et en cours. |
-| `/event gerer` | Panneau du staff : démarrer, inviter le vocal par DM, MVP, victoires, annulation, fin et gagnant. |
-| `/event classement` | Classement général ou par événement (MVP, victoires). |
+`index.js` charge automatiquement chaque fichier de `src/commands/` et `src/events/`. Pour ajouter une commande, il suffit de déposer le fichier au bon endroit, puis de lancer `npm run deploy`.
