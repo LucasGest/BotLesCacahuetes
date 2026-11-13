@@ -91,7 +91,7 @@ async function claimDaily(userId) {
 }
 
 // Récompense de participation aux customs : une fois par jour, sinon relancer
-// /customs et s'y inscrire donnerait des cacahuètes sans limite.
+// /customs et s'y inscrire donnerait des pattes sans limite.
 async function claimCustomsReward(userId, amount) {
   const db = getDb();
   if (!db) {
@@ -115,7 +115,7 @@ async function claimCustomsReward(userId, amount) {
 }
 
 // Récompense des défis Valorant : validés à l'honneur, donc plafonnés par jour
-// pour qu'enchaîner les /defi-valorant ne crée pas des cacahuètes à l'infini.
+// pour qu'enchaîner les /defi-valorant ne crée pas des pattes à l'infini.
 // Retourne le montant réellement crédité (0 si le plafond est atteint).
 const CHALLENGE_DAILY_MAX = 150;
 

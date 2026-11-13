@@ -1,7 +1,7 @@
 const config = require('../config');
 
 // Verrou commun à tous les rôles que le bot donne tout seul (jeux, boutique,
-// rangs, clip, Cacahuète Suprême…) : il ne doit jamais transmettre un droit.
+// rangs…) : il ne doit jamais transmettre un droit.
 // Si quelqu'un ajoute par erreur un droit à l'un de ces rôles (ou si un rôle
 // porte le même nom qu'un rôle staff), l'attribution est refusée au lieu de
 // faire de quelqu'un un co-fondateur par accident.

@@ -322,7 +322,7 @@ module.exports = {
       : false;
 
     await interaction.update({
-      content: `✅ Inscrit en tant que **${rank}** !${rewarded ? ` (+${EVENT_PARTICIPATION_REWARD} 🥜)` : ''}`,
+      content: `✅ Inscrit en tant que **${rank}** !${rewarded ? ` (+${EVENT_PARTICIPATION_REWARD} 🐾)` : ''}`,
       components: []
     });
     await refreshSessionMessage(session, interaction.guild);

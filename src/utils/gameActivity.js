@@ -4,7 +4,7 @@ const { logError } = require('./logger');
 const { safeAddRole } = require('./roleSafety');
 
 const ACTIVITY_CHANNEL_ID = '1568628826320142414'; // #activité
-const BASE_ROLE_ID = '1539944509566357557'; // 🥜・Cacahuète
+const BASE_ROLE_ID = '1539944509566357557'; // ・Cloudy
 const BOARD_DELAY_MS = 3_000;
 const ROLE_LIMIT = 230;
 const RESYNC_INTERVAL_MS = 60 * 60 * 1000; // revérification complète toutes les heures
@@ -74,7 +74,7 @@ async function getOrCreateRole(guild, name, options = {}) {
 
   const creation = (async () => {
     const role = await guild.roles.create({ name, permissions: [], reason: 'Jeu détecté', ...options });
-    // Les rôles « En jeu » sont affichés à part : au-dessus de 🥜・Cacahuète et des rôles
+    // Les rôles « En jeu » sont affichés à part : au-dessus de ・Cloudy et des rôles
     // achetés (🎟️, couleurs), pour regrouper les joueurs pendant la partie.
     const base = guild.roles.cache.get(BASE_ROLE_ID);
     // Juste au-dessus des rôles achetés, jamais au-dessus des autres « En jeu » : sinon
@@ -156,10 +156,10 @@ function buildBoard(guild) {
   const icon = guild?.iconURL?.({ size: 256 }) ?? null;
   const embed = new EmbedBuilder()
     .setColor(sorted.length ? 0x57f287 : 0x4f545c)
-    .setAuthor({ name: 'Les Cacahuètes · Activité', iconURL: icon ?? undefined })
+    .setAuthor({ name: 'CloudyCat · Activité', iconURL: icon ?? undefined })
     .setTitle(BOARD_TITLE)
     .setThumbnail(icon)
-    .setFooter({ text: '🥜 Mis à jour en direct' })
+    .setFooter({ text: '🐾 Mis à jour en direct' })
     .setTimestamp();
 
   if (sorted.length === 0) {
@@ -168,7 +168,7 @@ function buildBoard(guild) {
 
   const count = playing.size;
   embed.setDescription(
-    `🟢 **${count}** cacahuète${count > 1 ? 's' : ''} en jeu sur **${sorted.length}** jeu${sorted.length > 1 ? 'x' : ''}\n` +
+    `🟢 **${count}** joueur${count > 1 ? 's' : ''} en jeu sur **${sorted.length}** jeu${sorted.length > 1 ? 'x' : ''}\n` +
     '▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬'
   );
 

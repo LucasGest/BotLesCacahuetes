@@ -42,14 +42,14 @@ function hasForbiddenWord(nom) {
   return FORBIDDEN_WORDS.some((word) => plain.includes(word));
 }
 
-// 🥜・Cacahuète est coloré : un rôle acheté placé en dessous verrait sa couleur
+// ・Cloudy est coloré : un rôle acheté placé en dessous verrait sa couleur
 // cachée chez tous les membres. On le place donc juste au-dessus.
-const BASE_ROLE_ID = '1539944509566357557'; // 🥜・Cacahuète
+const BASE_ROLE_ID = '1539944509566357557'; // ・Cloudy
 
 async function placeAboveBase(guild, role) {
   const base = guild.roles.cache.get(BASE_ROLE_ID);
   if (base && role.position <= base.position) {
-    await role.setPosition(base.position + 1, { reason: 'Rôle acheté visible au-dessus de 🥜・Cacahuète' });
+    await role.setPosition(base.position + 1, { reason: 'Rôle acheté visible au-dessus de ・Cloudy' });
   }
 }
 
@@ -67,9 +67,9 @@ function buildItemsMenu() {
     .setCustomId('boutique:item')
     .setPlaceholder('Choisis un article')
     .addOptions([
-      { label: `Couleur de pseudo — ${PRICE_COULEUR} 🥜`, value: 'couleur', emoji: '🎨' },
-      { label: `Rôle perso 7 jours — ${PRICE_ROLE_PERSO} 🥜`, value: 'role', emoji: '🎟️' },
-      { label: `Imposer un agent à un pote — ${PRICE_CURSE} 🥜`, value: 'curse', emoji: '😈' }
+      { label: `Couleur de pseudo — ${PRICE_COULEUR} 🐾`, value: 'couleur', emoji: '🎨' },
+      { label: `Rôle perso 7 jours — ${PRICE_ROLE_PERSO} 🐾`, value: 'role', emoji: '🎟️' },
+      { label: `Imposer un agent à un pote — ${PRICE_CURSE} 🐾`, value: 'curse', emoji: '😈' }
     ]);
 }
 
@@ -86,18 +86,18 @@ async function getOrCreateColorRole(guild, option) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('boutique')
-    .setDescription('Dépense tes cacahuètes contre des avantages.'),
+    .setDescription('Dépense tes pattes contre des avantages.'),
 
   async execute(interaction) {
     const balance = await getBalance(interaction.user.id);
     const embed = new EmbedBuilder()
       .setColor(0xc8864b)
-      .setTitle('🥜 Boutique')
+      .setTitle('🐾 Boutique')
       .setDescription(
-        `Ton solde : **${balance} 🥜**\n\n` +
-          `🎨 **Couleur de pseudo** — ${PRICE_COULEUR} 🥜\n` +
-          `🎟️ **Rôle perso 7 jours** — ${PRICE_ROLE_PERSO} 🥜\n` +
-          `😈 **Imposer un agent à un pote (prochain /customs)** — ${PRICE_CURSE} 🥜`
+        `Ton solde : **${balance} 🐾**\n\n` +
+          `🎨 **Couleur de pseudo** — ${PRICE_COULEUR} 🐾\n` +
+          `🎟️ **Rôle perso 7 jours** — ${PRICE_ROLE_PERSO} 🐾\n` +
+          `😈 **Imposer un agent à un pote (prochain /customs)** — ${PRICE_CURSE} 🐾`
       );
 
     await interaction.reply({
@@ -118,7 +118,7 @@ module.exports = {
           .addOptions(COLOR_OPTIONS.map((o) => ({ label: o.label, value: o.id })));
 
         await interaction.update({
-          content: `Choisis ta couleur (${PRICE_COULEUR} 🥜) :`,
+          content: `Choisis ta couleur (${PRICE_COULEUR} 🐾) :`,
           embeds: [],
           components: [new ActionRowBuilder().addComponents(select)]
         });
@@ -155,7 +155,7 @@ module.exports = {
         const select = new UserSelectMenuBuilder().setCustomId('boutique:curse-cible').setPlaceholder('Choisis la victime');
 
         await interaction.update({
-          content: `Choisis à qui imposer un agent (${PRICE_CURSE} 🥜) :`,
+          content: `Choisis à qui imposer un agent (${PRICE_CURSE} 🐾) :`,
           embeds: [],
           components: [new ActionRowBuilder().addComponents(select)]
         });
@@ -243,7 +243,7 @@ module.exports = {
         return;
       }
 
-      // Copier un rôle du serveur (🥜・Cacahuète Suprême, staff…) est refusé ; les
+      // Copier un rôle du serveur (staff…) est refusé ; les
       // rôles de jeu sont libres d'accès, donc reprendre leur nom ne trompe personne.
       const roleName = customRoleName(nom);
       const isGameRole = (name) => name.startsWith('🎮・') || name.startsWith('🕹️・');

@@ -36,12 +36,7 @@ module.exports = {
     // (token/invite qui aurait fuité, bot ajouté à un autre serveur...) est
     // ignorée plutôt que traitée. Ne jamais se fier uniquement au fait que
     // Discord ne propose la commande que là où elle est déployée.
-    // Seule exception : les boutons du DM d'invitation à un événement, qui
-    // n'ont par nature pas de serveur.
-    const isEventInvitation =
-      !interaction.guildId && interaction.isButton() && /^event:(invite|decline):/.test(interaction.customId);
-
-    if (interaction.guildId !== config.guildId && !isEventInvitation) {
+    if (interaction.guildId !== config.guildId) {
       console.warn(`Interaction ignorée hors serveur autorisé (guildId: ${interaction.guildId}).`);
       return;
     }

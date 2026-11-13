@@ -1,8 +1,6 @@
 const { Events } = require('discord.js');
 const { addCoins } = require('../utils/economy');
 const { logError } = require('../utils/logger');
-const { inviteOnVoiceJoin } = require('../utils/eventVoice');
-const { playArrivalSound } = require('../utils/eventSounds');
 const { onVoiceStateUpdate } = require('../utils/voiceRanking');
 
 const COINS_PER_MINUTE = 2;
@@ -34,12 +32,6 @@ module.exports = {
 
     // Classement vocal : sans attendre, une erreur Firestore ne doit pas bloquer le reste.
     onVoiceStateUpdate(oldState, newState).catch((error) => logError(`Classement vocal de ${member.user.tag}`, error));
-
-    // Sans attendre : une invitation lente ou en échec ne doit pas gêner le gain vocal.
-    if (newState.channelId && newState.channelId !== oldState.channelId) {
-      inviteOnVoiceJoin(member, newState.channelId).catch((error) => logError(`Invitation vocale de ${member.user.tag}`, error));
-      playArrivalSound(member, newState.channelId).catch((error) => logError(`Son d'arrivée de ${member.user.tag}`, error));
-    }
 
     const wasInVoice = Boolean(oldState.channelId);
     const isInVoice = Boolean(newState.channelId);

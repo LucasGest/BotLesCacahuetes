@@ -6,7 +6,7 @@ const { logError } = require('./logger');
 const COLLECTION = 'voiceStats';
 const META_COLLECTION = 'voiceStatsMeta';
 const ACTIVITY_CHANNEL_ID = '1568628826320142414'; // #activité
-const SESSION_CAP_MINUTES = 180; // plafond anti-AFK par session, comme les cacahuètes
+const SESSION_CAP_MINUTES = 180; // plafond anti-AFK par session, comme les pattes
 const FLUSH_INTERVAL_MS = 10 * 60 * 1000; // enregistre les sessions en cours toutes les 10 min
 const WEEKLY_CHECK_MS = 5 * 60 * 1000;
 const REWARDS = [300, 200, 100];
@@ -265,7 +265,7 @@ async function postWeeklyRanking(client) {
     }
   });
 
-  const lines = rankingLines(rows).map((line, i) => (i < REWARDS.length ? `${line} · +${REWARDS[i]} 🥜` : line));
+  const lines = rankingLines(rows).map((line, i) => (i < REWARDS.length ? `${line} · +${REWARDS[i]} 🐾` : line));
   const embed = new EmbedBuilder()
     .setColor(0xf1c40f)
     .setTitle('🎙️ Top vocal de la semaine')

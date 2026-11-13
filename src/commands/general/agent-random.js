@@ -19,7 +19,7 @@ const EMOJI_ROLE = {
 const PHRASES = [
   'Pas le choix, tu le joues. 😈',
   'Le destin a parlé. 🎲',
-  'Bonne chance à tes mates… 🥜',
+  'Bonne chance à tes mates… 🐾',
   'Aucune excuse si tu perds. 😏',
   'Cacabot a décidé, point final. 🤖',
 ];
@@ -105,8 +105,8 @@ module.exports = {
 
     let liste = possedes ? tous.filter((a) => a.gratuit || possedes.includes(a.name)) : tous;
     const infoPool = possedes
-      ? `Tirage parmi les ${liste.length} agents de ${joueur.username} 🥜`
-      : `${joueur.username} n'a pas configuré ses agents : tirage parmi tous 🥜`;
+      ? `Tirage parmi les ${liste.length} agents de ${joueur.username} 🐾`
+      : `${joueur.username} n'a pas configuré ses agents : tirage parmi tous 🐾`;
 
     if (roleChoisi) liste = liste.filter((a) => a.role === roleChoisi);
 

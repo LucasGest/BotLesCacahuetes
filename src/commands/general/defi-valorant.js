@@ -27,12 +27,12 @@ function buildEmbed(session) {
         ? `\n🏁 **Terminé** — ${session.endedReason}`
         : `\nRéussis un défi en partie, puis clique sur son bouton ✅.\n⏳ Fin <t:${Math.floor(session.expiresAt / 1000)}:R>`)
     )
-    .setFooter({ text: `Validation à l'honneur · ${ALL_DONE_BONUS} 🥜 de bonus pour les 5 défis · ${CHALLENGE_DAILY_MAX} 🥜 max par jour` });
+    .setFooter({ text: `Validation à l'honneur · ${ALL_DONE_BONUS} 🐾 de bonus pour les 5 défis · ${CHALLENGE_DAILY_MAX} 🐾 max par jour` });
 
   session.challenges.forEach((challenge, index) => {
     const done = [...session.done[index]].map((id) => `<@${id}>`).join(' ');
     embed.addFields({
-      name: `${index + 1}. ${challenge.emoji} ${challenge.label} · ${challenge.reward} 🥜`,
+      name: `${index + 1}. ${challenge.emoji} ${challenge.label} · ${challenge.reward} 🐾`,
       value: `${challenge.text}${challenge.team ? ' 👥' : ''}\n${done ? `✅ ${done}` : '*Pas encore réussi*'}`
     });
   });
@@ -89,7 +89,7 @@ function buildListEmbed() {
     .setDescription('Chaque `/defi-valorant` en tire 5 au hasard. 👥 = défi de groupe (jamais tiré en solo).');
   for (const [level, info] of Object.entries(LEVELS)) {
     embed.addFields({
-      name: `${info.emoji} ${info.label} · ${info.reward} 🥜`,
+      name: `${info.emoji} ${info.label} · ${info.reward} 🐾`,
       value: CHALLENGES.filter((c) => c.level === level).map((c) => `• ${c.text}${c.team ? ' 👥' : ''}`).join('\n')
     });
   }
@@ -225,8 +225,8 @@ module.exports = {
       await interaction.update({ embeds: [buildEmbed(session)], components: buildComponents(session), allowedMentions: { parse: [] } });
       await interaction.followUp({
         content: gained > 0
-          ? `✅ Défi ${Number(index) + 1} validé : **+${gained} 🥜**${allDone ? ` (dont ${ALL_DONE_BONUS} de bonus, les 5 défis sont faits 🏆)` : ''}`
-          : `✅ Défi ${Number(index) + 1} validé, mais tu as atteint le maximum de ${CHALLENGE_DAILY_MAX} 🥜 de défis pour aujourd'hui.`,
+          ? `✅ Défi ${Number(index) + 1} validé : **+${gained} 🐾**${allDone ? ` (dont ${ALL_DONE_BONUS} de bonus, les 5 défis sont faits 🏆)` : ''}`
+          : `✅ Défi ${Number(index) + 1} validé, mais tu as atteint le maximum de ${CHALLENGE_DAILY_MAX} 🐾 de défis pour aujourd'hui.`,
         flags: MessageFlags.Ephemeral
       });
     }

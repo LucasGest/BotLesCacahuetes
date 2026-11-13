@@ -1,6 +1,5 @@
 const { Events } = require('discord.js');
 const { startBirthdayScheduler } = require('../utils/birthdayScheduler');
-const { startClipOfTheWeekScheduler } = require('../utils/clipOfTheWeek');
 const { startAgentCacheScheduler } = require('../utils/valorantAgents');
 const { startWeaponCacheScheduler } = require('../utils/valorantWeapons');
 const { startCustomRoleScheduler } = require('../utils/customRoles');
@@ -18,7 +17,6 @@ module.exports = {
     const commit = process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local';
     console.log(`🚀 Bot démarré : connecté en tant que ${client.user.tag} (commit ${commit})`);
     startBirthdayScheduler(client);
-    startClipOfTheWeekScheduler(client);
     startAgentCacheScheduler();
     startWeaponCacheScheduler();
     startCustomRoleScheduler(client);

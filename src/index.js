@@ -100,7 +100,7 @@ process.on('uncaughtException', (error) => {
 http
   .createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Les Cacahuètes bot is alive 🥜');
+    res.end('CloudyCat bot is alive 🐾');
   })
   .listen(config.port, () => {
     console.log(`Serveur keep-alive en écoute sur le port ${config.port}.`);

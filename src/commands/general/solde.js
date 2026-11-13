@@ -4,7 +4,7 @@ const { getBalance } = require('../../utils/economy');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('solde')
-    .setDescription('Affiche ton solde de cacahuètes (ou celui d\'un autre membre).')
+    .setDescription('Affiche ton solde de pattes (ou celui d\'un autre membre).')
     .addUserOption((option) => option.setName('membre').setDescription('Le membre dont tu veux voir le solde')),
 
   async execute(interaction) {
@@ -13,7 +13,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xc8864b)
-      .setDescription(`🥜 **${target.username}** possède **${balance}** cacahuète(s).`);
+      .setDescription(`🐾 **${target.username}** possède **${balance}** patte(s).`);
 
     await interaction.reply({ embeds: [embed] });
   }

@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 
 const WELCOME_CHANNEL_ID = '1553346771344826468';
-const WELCOME_COLOR = 0xc8864b; // couleur cacahuète
+const WELCOME_COLOR = 0x8ec5ff; // bleu nuage
 
 // Les salons cités dans le message sont résolus par nom (pas par ID codé en
 // dur) : si le salon n'existe pas (renommé, supprimé...), on retombe sur du
@@ -24,28 +24,26 @@ module.exports = {
 
     const reglementMention = findChannelMention(member.guild, 'règlement');
     const chercheMateMention = findChannelMention(member.guild, 'cherche-mate');
-    const clipsMention = findChannelMention(member.guild, 'clips');
 
     const embed = new EmbedBuilder()
       .setColor(WELCOME_COLOR)
-      .setTitle('Bienvenue chez Les Cacahuètes ! 🥜')
+      .setTitle('Bienvenue sur CloudyCat ! ☁️🐱')
       .setThumbnail(member.user.displayAvatarURL())
       .setDescription(
-        '🥜 **Une nouvelle cacahuète est tombée du paquet !**\n\n' +
-          `Tu es notre **${member.guild.memberCount}e cacahuète** 🎉\n\n` +
+        '🐾 **Un nouveau chat atterrit dans les nuages !**\n\n' +
+          `Tu es notre **${member.guild.memberCount}e membre** 🎉\n\n` +
           `📜 Lis le ${reglementMention}\n` +
           `🔎 Trouve des mates dans ${chercheMateMention}\n` +
-          `🎬 Montre tes skills dans ${clipsMention}\n` +
           `🎉 Viens aux **Customs du vendredi** !`
       )
       .setFooter({
-        text: 'Les Cacahuètes • On joue, on rage, on rit',
+        text: 'CloudyCat • On joue, on rage, on rit',
         iconURL: member.guild.iconURL() ?? undefined
       })
       .setTimestamp();
 
     await channel.send({
-      content: `🥜 ${member} vient de débarquer !`,
+      content: `🐾 ${member} vient de débarquer !`,
       embeds: [embed]
     });
   }

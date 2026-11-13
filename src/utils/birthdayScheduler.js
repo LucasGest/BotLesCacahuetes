@@ -44,13 +44,13 @@ async function checkBirthdays(client) {
       .setTitle(`Joyeux anniversaire ${member.user.username} ! 🎉`)
       .setThumbnail(member.user.displayAvatarURL())
       .setDescription(
-        'Une cacahuète de plus un an plus salée 🥜🧂\n\n' +
+        'Un an de plus, et toujours le poil soyeux 🐱✨\n\n' +
           'Toute la commu te souhaite une journée de folie 🎈\n' +
           'Que tes aims soient précis et tes mates pas tiltés 🎯\n\n' +
           '👇 Balance-lui un petit mot en réponse !'
       )
       .setFooter({
-        text: 'Les Cacahuètes • Anniversaires',
+        text: 'CloudyCat • Anniversaires',
         iconURL: member.guild.iconURL() ?? undefined
       })
       .setTimestamp();
